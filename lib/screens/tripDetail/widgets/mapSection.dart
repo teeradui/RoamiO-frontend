@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/mapSectionViewmodel.dart';
 
@@ -21,10 +22,11 @@ class _MapSectionState extends State<MapSection> {
   @override
   void initState() {
     super.initState();
-    _createUserMarkers();
+    viewModel.loadMapData();
+    _createMapMarkers();
   }
 
-  Future<void> _createUserMarkers() async {
+  Future<void> _createMapMarkers() async {
     final Set<Marker> newMarkers = {};
 
     for (final member in viewModel.members) {
@@ -40,11 +42,83 @@ class _MapSectionState extends State<MapSection> {
       );
     }
 
+    if (viewModel.isActive) {
+      for (final place in viewModel.visitedPlaces) {
+        final icon = await _createVisitedPlaceMarkerIcon(place.name);
+
+        newMarkers.add(
+          Marker(
+            markerId: MarkerId(place.id),
+            position: place.location,
+            icon: icon,
+            infoWindow: InfoWindow(
+              title: place.name,
+              snippet: "${place.type} · ${place.timeText}",
+            ),
+          ),
+        );
+      }
+    }
+
     if (!mounted) return;
 
     setState(() {
       markers = newMarkers;
     });
+  }
+
+  Future<BitmapDescriptor> _createVisitedPlaceMarkerIcon(
+    String placeName,
+  ) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    const double height = 44;
+    const double paddingX = 14;
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: placeName,
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      maxLines: 1,
+      ellipsis: "...",
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout(maxWidth: 160);
+
+    final double width = textPainter.width + paddingX * 2;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, width, height),
+      const Radius.circular(100),
+    );
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.18)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+
+    final bgPaint = Paint()..color = AppColors.bgCard;
+
+    canvas.drawRRect(rect.shift(const Offset(0, 3)), shadowPaint);
+
+    canvas.drawRRect(rect, bgPaint);
+
+    textPainter.paint(
+      canvas,
+      Offset(paddingX, height / 2 - textPainter.height / 2),
+    );
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(width.ceil(), height.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
   }
 
   Future<BitmapDescriptor> _createUserMarkerIcon(String username) async {
@@ -53,36 +127,18 @@ class _MapSectionState extends State<MapSection> {
 
     const double size = 60;
     const double border = 4;
+    final Offset center = const Offset(size / 2, size / 2);
 
     final Paint shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.18)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
 
-    final Paint outerPaint = Paint()
-      ..color = AppColors.btnPrimary;
+    final Paint outerPaint = Paint()..color = AppColors.btnPrimary;
+    final Paint innerPaint = Paint()..color = AppColors.bgHighlight;
 
-    final Paint innerPaint = Paint()
-      ..color = AppColors.bgHighlight;
-
-    final Offset center = const Offset(size / 2, size / 2);
-
-    canvas.drawCircle(
-      center.translate(0, 4),
-      size / 2 - 6,
-      shadowPaint,
-    );
-
-    canvas.drawCircle(
-      center,
-      size / 2 - 6,
-      outerPaint,
-    );
-
-    canvas.drawCircle(
-      center,
-      size / 2 - 6 - border,
-      innerPaint,
-    );
+    canvas.drawCircle(center.translate(0, 4), size / 2 - 6, shadowPaint);
+    canvas.drawCircle(center, size / 2 - 6, outerPaint);
+    canvas.drawCircle(center, size / 2 - 6 - border, innerPaint);
 
     final textPainter = TextPainter(
       text: TextSpan(
@@ -143,15 +199,17 @@ class _MapSectionState extends State<MapSection> {
               ),
               clipBehavior: Clip.antiAlias,
               child: GoogleMap(
+                
                 initialCameraPosition: CameraPosition(
                   target: viewModel.mapCenter,
-                  zoom: 15,
+                  zoom: 13,
                 ),
                 onMapCreated: (controller) {
                   mapController = controller;
                 },
                 markers: markers,
-                zoomControlsEnabled: false,
+                polylines: viewModel.routePolylines,
+                zoomControlsEnabled: true,
                 myLocationButtonEnabled: false,
                 compassEnabled: false,
               ),
@@ -159,17 +217,10 @@ class _MapSectionState extends State<MapSection> {
 
             const SizedBox(height: 14),
 
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: viewModel.members.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final member = viewModel.members[index];
+            if (viewModel.isActive && viewModel.hasVisitedPlaces)
+              _VisitedRouteSummary(viewModel: viewModel),
 
-                
-              },
-            ),
+            const SizedBox(height: 12),
           ],
         );
       },
@@ -177,3 +228,142 @@ class _MapSectionState extends State<MapSection> {
   }
 }
 
+class _VisitedRouteSummary extends StatelessWidget {
+  const _VisitedRouteSummary({
+    required this.viewModel,
+  });
+
+  final MapSectionViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: AppColors.gradientUpAc,
+                ).createShader(bounds),
+                child: const Icon(
+                  MingCuteIcons.mgc_location_2_fill,
+                  size: 22,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Places Visited",
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          Column(
+            children: viewModel.visitedPlaces.asMap().entries.map((entry) {
+              final index = entry.key;
+              final place = entry.value;
+
+              return _VisitedPlaceTimelineTile(
+                place: place,
+                isLast: index == viewModel.visitedPlaces.length - 1,
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VisitedPlaceTimelineTile extends StatelessWidget {
+  const _VisitedPlaceTimelineTile({required this.place, required this.isLast});
+
+  final VisitedPlaceMapPoint place;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 22,
+          child: Column(
+            children: [
+              Container(
+                width: 11,
+                height: 11,
+                decoration: const BoxDecoration(
+                  color: AppColors.btnPrimary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              if (!isLast)
+                Container(
+                  width: 2,
+                  height: 42,
+                  margin: const EdgeInsets.only(top: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.textMuted.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        const SizedBox(width: 10),
+
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 10 : 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  place.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  "${place.type} · ${place.timeText}",
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

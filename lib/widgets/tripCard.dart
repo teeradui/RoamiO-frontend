@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/tripCardViewmodel.dart';
 import 'package:roamio_frontend/widgets/memberAvatarStack.dart';
 
 class TripCard extends StatelessWidget {
-  const TripCard({
-    super.key,
-    required this.viewModel,
-    this.onTap,
-  });
+  const TripCard({super.key, required this.viewModel, this.onTap});
 
   final TripCardViewModel viewModel;
   final VoidCallback? onTap;
@@ -43,10 +40,7 @@ class TripCard extends StatelessWidget {
                 color: Colors.grey.shade300,
                 child: viewModel.imageUrl == null
                     ? const Icon(Icons.image)
-                    : Image.network(
-                        viewModel.imageUrl!,
-                        fit: BoxFit.cover,
-                      ),
+                    : Image.network(viewModel.imageUrl!, fit: BoxFit.cover),
               ),
             ),
 
@@ -83,8 +77,8 @@ class TripCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              viewModel.statusIcon,
+                            HugeIcon(
+                              icon: viewModel.statusIcon,
                               size: 14,
                               color: viewModel.statusColor,
                             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 
 enum TripStatus {
@@ -38,16 +39,16 @@ class TripCardViewModel extends ChangeNotifier {
     }
   }
 
-  IconData get statusIcon {
-    switch (status) {
-      case TripStatus.upcoming:
-        return Icons.access_time;
-      case TripStatus.active:
-        return Icons.navigation;
-      case TripStatus.completed:
-        return Icons.check_circle_outline;
-    }
+  dynamic get statusIcon {
+  switch (status) {
+    case TripStatus.upcoming:
+      return HugeIcons.strokeRoundedClock01;
+    case TripStatus.active:
+      return HugeIcons.strokeRoundedNavigation03;
+    case TripStatus.completed:
+      return HugeIcons.strokeRoundedCheckmarkCircle02;
   }
+}
 
   Color get statusColor {
     switch (status) {

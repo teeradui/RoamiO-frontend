@@ -360,7 +360,7 @@ class _InfoRow extends StatelessWidget {
     this.backgroundColor,
   });
 
-  final IconData icon;
+  final dynamic icon;
   final String text;
   final Color iconColor;
   final Color textColor;
@@ -377,8 +377,12 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: iconColor),
+          icon is IconData
+              ? Icon(icon, size: 18, color: iconColor)
+              : HugeIcon(icon: icon, size: 18, color: iconColor),
+
           const SizedBox(width: 8),
+
           Text(
             text,
             style: TextStyle(
