@@ -37,7 +37,7 @@ class MemberSectionViewModel extends ChangeNotifier {
   int get memberCount => members.length;
 
   void addMember() {
-    // TODO: later go to add member screen
+    // TODO: later go to add invite screen
   }
 
   void removeMember(String id) {
