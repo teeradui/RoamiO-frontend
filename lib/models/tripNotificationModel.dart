@@ -2,8 +2,9 @@ class TripNotification {
   final String notificationId;
   final String userId;
   final String? tripId;
-  final String? type;
+  final String? title;
   final String? message;
+  final String? referenceId;
   final bool isRead;
   final DateTime? createdAt;
 
@@ -11,8 +12,9 @@ class TripNotification {
     required this.notificationId,
     required this.userId,
     this.tripId,
-    this.type,
+    this.title,
     this.message,
+    this.referenceId,
     this.isRead = false,
     this.createdAt,
   });
@@ -22,8 +24,9 @@ class TripNotification {
       notificationId: json['notificationId']?.toString() ?? '',
       userId: json['userId']?.toString() ?? '',
       tripId: json['tripId']?.toString(),
-      type: json['type'],
+      title: json['title'],
       message: json['message'],
+      referenceId: json['referenceId']?.toString(),
       isRead: json['isRead'] ?? false,
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/viewmodels/tripCardViewmodel.dart';
+import 'package:roamio_frontend/models/services/tripService.dart';
+import 'package:roamio_frontend/models/tripModel.dart' as trip_model;
 
 enum TripFilter {
   all,
@@ -9,34 +11,84 @@ enum TripFilter {
 }
 
 class HomeViewModel extends ChangeNotifier {
-  TripFilter selectedFilter = TripFilter.all;
+  final TripService _tripService;
 
-  final List<TripCardViewModel> trips = [
-    TripCardViewModel(
-      tripName: "Japan Autumn Trip",
-      startDate: "15 May 2026",
-      photoCount: 32,
-      placeCount: 8,
-      status: TripStatus.upcoming,
-      memberCount: 3,
-    ),
-    TripCardViewModel(
-      tripName: "Chiang Mai Weekend Trip",
-      startDate: "20 Jun 2026",
-      photoCount: 10,
-      placeCount: 4,
-      status: TripStatus.active,
-      memberCount: 2,
-    ),
-    TripCardViewModel(
-      tripName: "Bangkok Food Trip",
-      startDate: "02 Apr 2026",
-      photoCount: 48,
-      placeCount: 12,
-      status: TripStatus.completed,
-      memberCount: 4,
-    ),
+  HomeViewModel({TripService? tripService})
+    : _tripService = tripService ?? TripService();
+
+  TripFilter selectedFilter = TripFilter.all;
+ 
+  List<TripCardViewModel> trips = [];
+
+  bool isLoading = false;
+  String? errorMessage;
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
+ 
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    return '${date.day} ${_months[date.month - 1]} ${date.year}';
+  }
+ 
+  TripStatus _fromModelStatus(trip_model.TripStatus status) {
+    switch (status) {
+      case trip_model.TripStatus.active:
+        return TripStatus.active;
+      case trip_model.TripStatus.completed:
+        return TripStatus.completed;
+      case trip_model.TripStatus.upcoming:
+        return TripStatus.upcoming;
+    }
+  }
+
+
+  TripCardViewModel _toCardViewModel(trip_model.Trip trip) {
+    return TripCardViewModel(
+      tripId: trip.id,
+      tripName: trip.tripName,
+      startDate: _formatDate(trip.startDate),
+      // TODO: no backend source for photo/place/member counts yet on the
+      // trip-list endpoints. Defaulting to 0 until those exist; wiring
+      // memberCount via a per-trip TripMemberService call was deliberately
+      // skipped here to avoid an N+1 request per card in the list.
+      photoCount: 0,
+      placeCount: 0,
+      memberCount: 0,
+      status: _fromModelStatus(trip.tripStatus),
+      imageUrl: trip.imageUrl,
+    );
+  }
+ 
+  Future<void> loadTrips() async {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+ 
+    try {
+      final results = await Future.wait([
+        _tripService.getUpcomingTrips(),
+        _tripService.getActiveTrips(),
+        _tripService.getCompletedTrips(),
+      ]);
+ 
+      final allTrips = [
+        ...results[0],
+        ...results[1],
+        ...results[2],
+      ];
+ 
+      trips = allTrips.map(_toCardViewModel).toList();
+    } catch (e) {
+      errorMessage = "Unable to load trips.";
+    }
+ 
+    isLoading = false;
+    notifyListeners();
+  }
+
 
   List<TripCardViewModel> get upcomingActiveTrips {
   return trips.where((trip) {

@@ -53,7 +53,7 @@ class CompletedSection extends StatelessWidget {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const TripDetailScreen(),
+                      builder: (_) => TripDetailScreen(tripId: trip.tripId),
                     ),
                   );
                 },

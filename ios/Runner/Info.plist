@@ -30,6 +30,10 @@
 	<string>RoamiO needs your location to select a meeting point.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>RoamiO needs your location to track trips and select meeting points.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+	<string>location</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

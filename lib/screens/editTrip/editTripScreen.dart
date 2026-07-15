@@ -10,37 +10,54 @@ import 'package:roamio_frontend/viewmodels/createTripViewmodel.dart';
 import 'package:roamio_frontend/viewmodels/editTripViewmodel.dart';
 
 class EditTripScreen extends StatefulWidget {
-  const EditTripScreen({super.key});
+  const EditTripScreen({super.key, required this.tripId});
+
+  final String tripId;
 
   @override
   State<EditTripScreen> createState() => _EditTripScreenState();
 }
 
 class _EditTripScreenState extends State<EditTripScreen> {
-  final EditTripViewModel viewModel = EditTripViewModel();
+  late final EditTripViewModel viewModel = EditTripViewModel(
+    tripId: widget.tripId,
+  );
+
+  late final CreateTripViewModel formViewModel = CreateTripViewModel();
+
+  late final TextEditingController _tripNameController = TextEditingController(
+    text: viewModel.tripName,
+  );
+
 
   @override
   void initState() {
     super.initState();
     viewModel.loadInitialData();
+    viewModel.addListener(_syncFromViewModel);
   }
+
+    void _syncFromViewModel() {
+    formViewModel.countries = viewModel.countries;
+    formViewModel.states = viewModel.states;
+    formViewModel.selectedCountry = viewModel.selectedCountry;
+    formViewModel.selectedState = viewModel.selectedState;
+ 
+    if (_tripNameController.text != viewModel.tripName) {
+      _tripNameController.text = viewModel.tripName;
+    }
+  }
+
 
   @override
   void dispose() {
+    viewModel.removeListener(_syncFromViewModel);
+    _tripNameController.dispose();
     viewModel.dispose();
+    formViewModel.dispose();
     super.dispose();
   }
 
-  CreateTripViewModel get formViewModel {
-    final vm = CreateTripViewModel();
-
-    vm.countries = viewModel.countries;
-    vm.states = viewModel.states;
-    vm.selectedCountry = viewModel.selectedCountry;
-    vm.selectedState = viewModel.selectedState;
-
-    return vm;
-  }
 
   Future<void> save() async {
     final success = await viewModel.saveChanges();

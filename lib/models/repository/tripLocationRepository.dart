@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import '../../config/api_config.dart';
@@ -12,6 +13,48 @@ import '../tripLocationModel.dart';
 /// No caching here on purpose: live member locations should always be fetched
 /// fresh, unlike trips/members/invites which change less often.
 class TripLocationRepository {
+  Future<TripLocation> saveCurrentLocation(
+    String tripId, {
+    required String userId,
+  }) async {
+    final position = await _getCurrentPosition();
+ 
+    return save(
+      tripId,
+      userId: userId,
+      latitude: position.latitude,
+      longitude: position.longitude,
+      timestamp: position.timestamp,
+    );
+  }
+ 
+  Future<Position> _getCurrentPosition() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled.');
+    }
+ 
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception('Location permission denied.');
+      }
+    }
+ 
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception(
+        'Location permission permanently denied. Enable it in device settings.',
+      );
+    }
+ 
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      ),
+    );
+  }
+
   Future<TripLocation> save(
     String tripId, {
     required String userId,

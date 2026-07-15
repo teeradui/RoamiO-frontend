@@ -23,6 +23,10 @@ class TripLocationService {
     );
   }
 
+    Future<TripLocation> saveCurrentLocation(String tripId, {required String userId}) {
+    return _repo.saveCurrentLocation(tripId, userId: userId);
+  }
+
   Future<List<LatestMemberLocation>> getLatestLocations(String tripId) {
     return _repo.getLatest(tripId);
   }

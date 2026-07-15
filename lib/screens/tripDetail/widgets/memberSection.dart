@@ -2,21 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/memberSectionViewmodel.dart';
+import 'package:roamio_frontend/screens/tripDetail/widgets/inviteMemberSheet.dart';
 
 class MemberSection extends StatefulWidget {
-  const MemberSection({super.key});
-
+  const MemberSection({super.key, required this.tripId});
+ 
+  final String tripId;
+ 
   @override
   State<MemberSection> createState() => _MemberSectionState();
 }
 
 class _MemberSectionState extends State<MemberSection> {
-  final MemberSectionViewModel viewModel = MemberSectionViewModel();
+  late final MemberSectionViewModel viewModel = MemberSectionViewModel(
+    tripId: widget.tripId,
+  );
+ 
+  @override
+  void initState() {
+    super.initState();
+    viewModel.loadMembers();
+  }
 
   @override
   void dispose() {
     viewModel.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleAddMember() async {
+    await showInviteMemberSheet(context, widget.tripId);
+    // Invited users only become members after they accept — refreshing here
+    // won't show new members yet, but keeps the list honest if something
+    // else changed in the meantime.
+    viewModel.loadMembers();
   }
 
   @override
@@ -63,7 +82,7 @@ class _MemberSectionState extends State<MemberSection> {
 
                   if (viewModel.isCurrentUserOwner)
                     InkWell(
-                      onTap: viewModel.addMember,
+                      onTap: _handleAddMember,
                       borderRadius: BorderRadius.circular(99),
                       child: Container(
                         height: 32,

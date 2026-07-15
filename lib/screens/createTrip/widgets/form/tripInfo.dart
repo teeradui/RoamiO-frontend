@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:roamio_frontend/screens/createTrip/widgets/form/meetingPointField.dart';
 import 'package:roamio_frontend/viewmodels/createTripViewmodel.dart';
 import 'package:roamio_frontend/screens/createTrip/widgets/form/countryField.dart';
@@ -22,22 +23,27 @@ class _Step1TripInfoState extends State<Step1TripInfo> {
   DateTime? endDate;
   TimeOfDay? startTime;
 
-  final CreateTripViewModel viewModel = CreateTripViewModel();
-
-  @override
-  void initState() {
-    super.initState();
-    viewModel.loadCountries();
+  bool _countriesLoaded = false;
+ 
+  void _handleNext(CreateTripViewModel viewModel) {
+    if (viewModel.isStep1Valid) {
+      widget.onNext();
+    }
   }
 
-  @override
-  void dispose() {
-    viewModel.dispose();
-    super.dispose();
-  }
+
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<CreateTripViewModel>();
+ 
+    if (!_countriesLoaded) {
+      _countriesLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        viewModel.loadCountries();
+      });
+    }
+
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -331,33 +337,31 @@ class _Step1TripInfoState extends State<Step1TripInfo> {
 
           const SizedBox(height: 35),
 
-          AnimatedBuilder(
-            animation: viewModel,
-            builder: (context, _) {
-              return SizedBox(
-                width: 180,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: viewModel.isStep1Valid ? widget.onNext : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: viewModel.isStep1Valid
-                        ? AppColors.btnPrimary
-                        : AppColors.tabInactive,
-                    disabledBackgroundColor: AppColors.tabInactive,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    "Next",
-                    style: TextStyle(fontSize: 17, color: AppColors.bgPrimary),
-                  ),
+          SizedBox(
+            width: 180,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: viewModel.isStep1Valid
+                  ? () => _handleNext(viewModel)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: viewModel.isStep1Valid
+                    ? AppColors.btnPrimary
+                    : AppColors.tabInactive,
+                disabledBackgroundColor: AppColors.tabInactive,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              );
-            },
+              ),
+              child: const Text(
+                "Next",
+                style: TextStyle(fontSize: 17, color: AppColors.bgPrimary),
+              ),
+            ),
           ),
-
+ 
           const SizedBox(height: 20),
+
         ],
       ),
     );

@@ -11,14 +11,24 @@ import 'package:roamio_frontend/viewmodels/tripDetailViewmodel.dart';
 import 'package:roamio_frontend/screens/tripDetail/widgets/sectionTab.dart';
 
 class TripDetailScreen extends StatefulWidget {
-  const TripDetailScreen({super.key});
+  const TripDetailScreen({super.key, required this.tripId});
+
+  final String tripId;
 
   @override
   State<TripDetailScreen> createState() => _TripDetailScreenState();
 }
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
-  final TripDetailViewModel viewModel = TripDetailViewModel();
+  late final TripDetailViewModel viewModel = TripDetailViewModel(
+    tripId: widget.tripId,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel.loadTrip();
+  }
 
   @override
   void dispose() {
@@ -33,11 +43,11 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       case TripDetailSection.map:
         return MapSection();
       case TripDetailSection.activities:
-        return ActivitiesSection();
+        return ActivitiesSection(tripId: widget.tripId);
       case TripDetailSection.photo:
         return PhotoSection();
       case TripDetailSection.member:
-        return MemberSection();
+        return MemberSection(tripId: widget.tripId);
     }
   }
 
@@ -46,6 +56,13 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     return AnimatedBuilder(
       animation: viewModel,
       builder: (context, _) {
+        if (viewModel.isLoading) {
+          return const Scaffold(
+            backgroundColor: AppColors.bgPrimary,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         return Scaffold(
           backgroundColor: AppColors.bgPrimary,
           body: SafeArea(
@@ -182,8 +199,9 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                       await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              const EditTripScreen(),
+                                          builder: (_) => EditTripScreen(
+                                            tripId: viewModel.tripId,
+                                          ),
                                         ),
                                       );
 

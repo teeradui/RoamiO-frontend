@@ -12,6 +12,10 @@ class TripService {
     return _repo.insert(trip, image);
   }
 
+    Future<Trip> getTripById(String tripId, {bool forceRefresh = false}) {
+    return _repo.findById(tripId, forceRefresh: forceRefresh);
+  }
+
   Future<List<Trip>> getUpcomingTrips({bool forceRefresh = false}) {
     return _repo.findByStatus('Upcoming', forceRefresh: forceRefresh);
   }

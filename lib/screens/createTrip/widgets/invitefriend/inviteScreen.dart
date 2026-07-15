@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:provider/provider.dart';
 import 'package:roamio_frontend/screens/createTrip/widgets/invitefriend/friendCard.dart';
 import 'package:roamio_frontend/theme/colors.dart';
+import 'package:roamio_frontend/viewmodels/createTripViewmodel.dart';
 import 'package:roamio_frontend/viewmodels/inviteFriendsViewmodel.dart';
 
 class Step2InviteFriends extends StatefulWidget {
@@ -27,8 +29,32 @@ class _Step2InviteFriendsState extends State<Step2InviteFriends> {
     super.dispose();
   }
 
+  Future<void> _handleCreateTrip() async {
+    final createTripViewModel = context.read<CreateTripViewModel>();
+ 
+    final tripCreated = await createTripViewModel.submitCreateTrip();
+    if (!tripCreated || !mounted) return;
+ 
+    final tripId = createTripViewModel.createdTrip?.id;
+    if (tripId == null || tripId.isEmpty) return;
+ 
+    final invitesSent = await viewModel.sendInvites(tripId);
+    if (!mounted) return;
+ 
+    // Even if some invites failed, the trip itself was created successfully.
+    // We still advance — viewModel.errorMessage holds which invites failed,
+    // in case the success screen wants to surface it.
+    if (invitesSent || viewModel.errorMessage != null) {
+      widget.onNext();
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    final createTripViewModel = context.watch<CreateTripViewModel>();
+    final isBusy = createTripViewModel.isSubmitting || viewModel.isSubmitting;
+
     return AnimatedBuilder(
       animation: viewModel,
       builder: (context, _) {
@@ -182,7 +208,7 @@ class _Step2InviteFriendsState extends State<Step2InviteFriends> {
               height: 50,
               child: Expanded(
                 child: ElevatedButton(
-                  onPressed: widget.onNext,
+                  onPressed: isBusy ? null : _handleCreateTrip,
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 55),
                     backgroundColor: AppColors.btnPrimary,
@@ -190,18 +216,28 @@ class _Step2InviteFriendsState extends State<Step2InviteFriends> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    "Create Trip",
-                    style: TextStyle(
-                      color: AppColors.bgPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: isBusy
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation(AppColors.bgPrimary),
+                          ),
+                        )
+                      : const Text(
+                          "Create Trip",
+                          style: TextStyle(
+                            color: AppColors.bgPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ),
-
+ 
             const SizedBox(height: 20),
+
           ],
         );
       },

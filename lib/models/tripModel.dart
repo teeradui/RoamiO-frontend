@@ -25,39 +25,46 @@ String tripStatusToString(TripStatus status) {
 
 class Trip {
   final String id;
-  final String ownerId;
+  final String createdBy;
   final String tripName;
   final DateTime? startDate;
   final DateTime? endDate;
   final String? startTime;
   final String? tripDestination;
-  final String? meetingPoint;
+  final String? meetingPointName;
+  final double? meetingPointLat;
+  final double? meetingPointLon;
   final String? imageUrl;
   final TripStatus tripStatus;
-
+ 
   const Trip({
     this.id = '',
-    this.ownerId = '',
+    this.createdBy = '',
     required this.tripName,
     this.startDate,
     this.endDate,
     this.startTime,
     this.tripDestination,
-    this.meetingPoint,
+    this.meetingPointName,
+    this.meetingPointLat,
+    this.meetingPointLon,
     this.imageUrl,
     this.tripStatus = TripStatus.upcoming,
   });
 
+
   factory Trip.fromJson(Map<String, dynamic> json) {
     return Trip(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
-      ownerId: json['owner_id']?.toString() ?? json['ownerId']?.toString() ?? '',
+      createdBy: json['createdBy']?.toString() ?? '',
       tripName: json['trip_name'] ?? '',
       startDate: json['start_date'] != null ? DateTime.tryParse(json['start_date']) : null,
       endDate: json['end_date'] != null ? DateTime.tryParse(json['end_date']) : null,
       startTime: json['start_time'],
       tripDestination: json['trip_destination'],
-      meetingPoint: json['meeting_point'],
+      meetingPointName: json['meetingPointName'],
+      meetingPointLat: (json['meetingPointLat'] as num?)?.toDouble(),
+      meetingPointLon: (json['meetingPointLon'] as num?)?.toDouble(),
       imageUrl: json['image_url'],
       tripStatus: tripStatusFromString(json['trip_status']),
     );
@@ -70,7 +77,9 @@ class Trip {
       'end_date': endDate?.toIso8601String(),
       'start_time': startTime,
       'trip_destination': tripDestination,
-      'meeting_point': meetingPoint,
+      'meetingPointName': meetingPointName,
+      'meetingPointLat': meetingPointLat,
+      'meetingPointLon': meetingPointLon,
       'trip_status': tripStatusToString(tripStatus),
     };
   }
@@ -87,13 +96,15 @@ class Trip {
   }) {
     return Trip(
       id: id,
-      ownerId: ownerId,
+      createdBy: createdBy,
       tripName: tripName ?? this.tripName,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       startTime: startTime ?? this.startTime,
       tripDestination: tripDestination ?? this.tripDestination,
-      meetingPoint: meetingPoint ?? this.meetingPoint,
+      meetingPointName: meetingPointName ?? this.meetingPointName,
+      meetingPointLat: meetingPointLat ?? this.meetingPointLat,
+      meetingPointLon: meetingPointLon ?? this.meetingPointLon,
       imageUrl: imageUrl ?? this.imageUrl,
       tripStatus: tripStatus ?? this.tripStatus,
     );

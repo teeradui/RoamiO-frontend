@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:roamio_frontend/models/services/tripActivityService.dart';
+import 'package:roamio_frontend/models/tripActivityModel.dart' as trip_model;
 
 enum ActivityType {
   food,
@@ -26,40 +28,18 @@ class TripActivityItem {
 }
 
 class ActivitiesSectionViewModel extends ChangeNotifier {
-  final List<TripActivityItem> activities = [
-    TripActivityItem(
-      id: "1",
-      timeText: "14:00",
-      activityType: ActivityType.sightseeing,
-      placeType: "Beach",
-      placeName: "Kata Beach",
-      durationText: "3 hrs",
-    ),
-    TripActivityItem(
-      id: "2",
-      timeText: "16:00",
-      activityType: ActivityType.food,
-      placeType: "Restaurant",
-      placeName: "Kata Beach Cafe",
-      durationText: "1 hr",
-    ),
-    TripActivityItem(
-      id: "3",
-      timeText: "18:30",
-      activityType: ActivityType.transit,
-      placeType: "Transport",
-      placeName: "Local Bus",
-      durationText: "25 min",
-    ),
-    TripActivityItem(
-      id: "4",
-      timeText: "20:00",
-      activityType: ActivityType.accommodation,
-      placeType: "Hotel",
-      placeName: "The Sea Hotel",
-      durationText: "Overnight",
-    ),
-  ];
+  final String tripId;
+  final TripActivityService _tripActivityService;
+
+  ActivitiesSectionViewModel({
+    required this.tripId,
+    TripActivityService? tripActivityService,
+  }) : _tripActivityService = tripActivityService ?? TripActivityService();
+
+  List<TripActivityItem> activities = [];
+
+  bool isLoading = false;
+  String? errorMessage;
 
   bool get hasActivities => activities.isNotEmpty;
 
@@ -134,8 +114,61 @@ class ActivitiesSectionViewModel extends ChangeNotifier {
     }
   }
 
+  ActivityType _mapActivityType(String? value) {
+    switch (value) {
+      case 'Food':
+        return ActivityType.food;
+      case 'Accommodation':
+        return ActivityType.accommodation;
+      case 'Transit':
+        return ActivityType.transit;
+      case 'Sightseeing':
+      default:
+        return ActivityType.sightseeing;
+    }
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return '';
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  String _formatDuration(num? minutes) {
+    if (minutes == null) return '';
+    final total = minutes.round();
+    if (total < 60) return '$total min';
+    final hrs = total ~/ 60;
+    final mins = total % 60;
+    if (mins == 0) return '$hrs hr${hrs == 1 ? '' : 's'}';
+    return '$hrs hr${hrs == 1 ? '' : 's'} $mins min';
+  }
+
+  TripActivityItem _toItem(trip_model.TripActivity activity) {
+    return TripActivityItem(
+      id: activity.activityId,
+      timeText: _formatTime(activity.startTime),
+      activityType: _mapActivityType(activity.activityType),
+      placeType: activity.locationType ?? '',
+      placeName: activity.locationName ?? '',
+      durationText: _formatDuration(activity.duration),
+    );
+  }
+
   Future<void> loadActivities() async {
-    // TODO: call backend later
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final fetched = await _tripActivityService.getTimeline(tripId);
+      activities = fetched.map(_toItem).toList();
+    } catch (e) {
+      errorMessage = "Unable to load activities.";
+    }
+
+    isLoading = false;
     notifyListeners();
   }
 }

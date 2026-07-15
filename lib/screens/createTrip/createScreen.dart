@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:roamio_frontend/screens/createTrip/widgets/form/tripInfo.dart';
 import 'package:roamio_frontend/screens/createTrip/widgets/invitefriend/inviteScreen.dart';
 import 'package:roamio_frontend/screens/createTrip/widgets/success/successScreen.dart';
 import 'package:roamio_frontend/theme/colors.dart';
+import 'package:roamio_frontend/viewmodels/createTripViewmodel.dart';
 
-class CreateTripScreen extends StatefulWidget {
+class CreateTripScreen extends StatelessWidget {
   const CreateTripScreen({super.key});
 
   @override
-  State<CreateTripScreen> createState() => _CreateTripScreenState();
+    Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => CreateTripViewModel(),
+      child: const _CreateTripScreenBody(),
+    );
+  }
+
+}
+class _CreateTripScreenBody extends StatefulWidget {
+  const _CreateTripScreenBody();
+ 
+  @override
+  State<_CreateTripScreenBody> createState() => _CreateTripScreenBodyState();
 }
 
-class _CreateTripScreenState extends State<CreateTripScreen> {
+class _CreateTripScreenBodyState extends State<_CreateTripScreenBody> {
   int currentStep = 0;
 
   void nextStep() {

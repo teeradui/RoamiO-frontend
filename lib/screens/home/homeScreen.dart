@@ -6,7 +6,7 @@ import 'package:roamio_frontend/screens/home/widgets/tripFilterBar.dart';
 import 'package:roamio_frontend/screens/home/widgets/upcomingActiveSection.dart';
 import 'package:roamio_frontend/screens/tripDetail/tripDetailScreen.dart';
 import 'package:roamio_frontend/theme/colors.dart';
-import 'package:roamio_frontend/viewmodels/homeViewmodel.dart';
+import 'package:roamio_frontend/viewmodels/homeViewModel.dart';
 import 'package:roamio_frontend/widgets/tripCard.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,10 +19,24 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final HomeViewModel viewModel = HomeViewModel();
 
+    @override
+  void initState() {
+    super.initState();
+    viewModel.loadTrips();
+  }
+
   @override
   void dispose() {
     viewModel.dispose();
     super.dispose();
+  }
+
+  void _openTripDetail(String tripId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TripDetailScreen(tripId: tripId),
+      ),
+    );
   }
 
   @override
@@ -33,6 +47,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: AnimatedBuilder(
           animation: viewModel,
           builder: (context, _) {
+            if (viewModel.isLoading && viewModel.trips.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -60,13 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: viewModel.filteredTrips.map((trip) {
                           return TripCard(
                             viewModel: trip,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const TripDetailScreen(),
-                                ),
-                              );
-                            },
+                            onTap: () => _openTripDetail(trip.tripId),
                           );
                         }).toList(),
                       )

@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/activitiesSectionViewmodel.dart';
 
 class ActivitiesSection extends StatefulWidget {
-  const ActivitiesSection({super.key});
+  const ActivitiesSection({super.key, required this.tripId});
+
+  final String tripId;
 
   @override
   State<ActivitiesSection> createState() => _ActivitiesSectionState();
 }
 
 class _ActivitiesSectionState extends State<ActivitiesSection> {
-  final ActivitiesSectionViewModel viewModel = ActivitiesSectionViewModel();
+  late final ActivitiesSectionViewModel viewModel = ActivitiesSectionViewModel(
+    tripId: widget.tripId,
+  );
 
   @override
   void initState() {
@@ -32,6 +35,13 @@ class _ActivitiesSectionState extends State<ActivitiesSection> {
     return AnimatedBuilder(
       animation: viewModel,
       builder: (context, _) {
+        if (viewModel.isLoading) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         if (!viewModel.hasActivities) {
           return const _EmptyActivities();
         }

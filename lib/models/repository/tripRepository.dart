@@ -12,7 +12,7 @@ import '../tripModel.dart';
 class TripRepository {
   // Cache keyed by status string ('Upcoming' | 'Active' | 'Completed').
   final Map<String, List<Trip>> _statusCache = {};
-
+  final Map<String, Trip> _tripCache = {};
   void _invalidateCache() => _statusCache.clear();
 
   Future<Trip> insert(Trip trip, File? image) async {
@@ -57,6 +57,25 @@ class TripRepository {
     _statusCache[status] = trips;
     return trips;
   }
+
+   Future<Trip> findById(String tripId, {bool forceRefresh = false}) async {
+    if (!forceRefresh && _tripCache.containsKey(tripId)) {
+      return _tripCache[tripId]!;
+    }
+ 
+    final uri = Uri.parse('${ApiConfig.trips}/$tripId');
+    final headers = await AuthHeaders.build();
+    final response = await http.get(uri, headers: headers);
+ 
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load trip (${response.statusCode}): ${response.body}');
+    }
+ 
+    final trip = Trip.fromJson(jsonDecode(response.body));
+    _tripCache[tripId] = trip;
+    return trip;
+  }
+
 
   Future<Trip> update(String tripId, Map<String, dynamic> fields, {File? image}) async {
     final uri = Uri.parse('${ApiConfig.trips}/$tripId');

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/theme/colors.dart';
-import 'package:roamio_frontend/viewmodels/homeViewmodel.dart';
+import 'package:roamio_frontend/viewmodels/homeViewModel.dart';
 
 class TripFilterBar extends StatelessWidget {
   const TripFilterBar({

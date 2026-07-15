@@ -14,6 +14,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final NotificationViewModel viewModel = NotificationViewModel();
 
   @override
+  void initState() {
+    super.initState();
+    viewModel.loadNotifications();
+  }
+
+  @override
   void dispose() {
     viewModel.dispose();
     super.dispose();
@@ -100,7 +106,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
 
                   Expanded(
-                    child: viewModel.hasNotifications
+                    child: viewModel.isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : viewModel.hasNotifications
                         ? ListView(
                             padding: const EdgeInsets.fromLTRB(10, 24, 10, 0),
                             children: [
@@ -110,6 +118,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                   NotificationGroup.today,
                                 ),
                                 onTap: viewModel.markAsRead,
+                                onAccept: viewModel.acceptInvite,
+                                onReject: viewModel.rejectInvite,
                               ),
                               _NotificationGroupSection(
                                 title: "This week",
@@ -117,6 +127,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                   NotificationGroup.thisWeek,
                                 ),
                                 onTap: viewModel.markAsRead,
+                                onAccept: viewModel.acceptInvite,
+                                onReject: viewModel.rejectInvite,
                               ),
                               _NotificationGroupSection(
                                 title: "Previous notifications",
@@ -124,6 +136,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                   NotificationGroup.previous,
                                 ),
                                 onTap: viewModel.markAsRead,
+                                onAccept: viewModel.acceptInvite,
+                                onReject: viewModel.rejectInvite,
                               ),
                             ],
                           )
@@ -173,11 +187,15 @@ class _NotificationGroupSection extends StatelessWidget {
     required this.title,
     required this.notifications,
     required this.onTap,
+    required this.onAccept,
+    required this.onReject,
   });
 
   final String title;
   final List<NotificationItem> notifications;
   final ValueChanged<String> onTap;
+  final ValueChanged<String> onAccept;
+  final ValueChanged<String> onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -209,8 +227,8 @@ class _NotificationGroupSection extends StatelessWidget {
               return _NotificationCard(
                 notification: item,
                 onTap: () => onTap(item.id),
-                onAccept: () {},
-                onReject: () {},
+                onAccept: () => onAccept(item.id),
+                onReject: () => onReject(item.id),
               );
             },
           ),

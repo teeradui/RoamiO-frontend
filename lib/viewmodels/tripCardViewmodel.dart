@@ -10,6 +10,7 @@ enum TripStatus {
 
 class TripCardViewModel extends ChangeNotifier {
   TripCardViewModel({
+    required this.tripId,
     required this.tripName,
     required this.startDate,
     required this.photoCount,
@@ -19,6 +20,7 @@ class TripCardViewModel extends ChangeNotifier {
     this.memberCount = 0,
   });
 
+  final String tripId;
   final String tripName;
   final String startDate;
   final int photoCount;
