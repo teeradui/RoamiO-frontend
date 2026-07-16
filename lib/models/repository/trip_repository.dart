@@ -29,24 +29,6 @@ class TripRepository {
 
     final tripData = trip.toJson();
 
-    final startDateValue = tripData['startDate']?.toString();
-    final startTimeValue = tripData['startTime']?.toString();
-
-    if (startDateValue != null && startTimeValue != null) {
-      final date = DateTime.parse(startDateValue);
-      final timeParts = startTimeValue.split(':');
-
-      final startDateTime = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        int.parse(timeParts[0]),
-        int.parse(timeParts[1]),
-      );
-
-      tripData['startTime'] = startDateTime.toIso8601String();
-    }
-
     print('========== CREATE TRIP REQUEST ==========');
     print('URL: $uri');
     print('Trip JSON: $tripData');
