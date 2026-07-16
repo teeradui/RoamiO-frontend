@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:roamio_frontend/screens/createTrip/createScreen.dart';
-import 'package:roamio_frontend/screens/friends/friendScreen.dart';
-import 'package:roamio_frontend/screens/leaderborad/leaderboardScreen.dart';
-import 'package:roamio_frontend/screens/profile/profileScreen.dart';
-import 'package:roamio_frontend/screens/home/homeScreen.dart';
+import 'package:roamio_frontend/screens/createTrip/create_screen.dart';
+import 'package:roamio_frontend/screens/friends/friend_screen.dart';
+import 'package:roamio_frontend/screens/leaderborad/leaderboard_screen.dart';
+import 'package:roamio_frontend/screens/profile/profile_screen.dart';
+import 'package:roamio_frontend/screens/home/home_screen.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:hugeicons/styles/stroke_rounded.dart';

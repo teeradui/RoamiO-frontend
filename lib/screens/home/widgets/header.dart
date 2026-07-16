@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:roamio_frontend/screens/notification/notificationscreen.dart';
+import 'package:roamio_frontend/screens/notification/notification_screen.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 
 class HomeHeader extends StatelessWidget {
