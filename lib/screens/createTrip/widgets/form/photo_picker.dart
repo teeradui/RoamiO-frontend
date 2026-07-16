@@ -8,11 +8,13 @@ import 'package:roamio_frontend/theme/colors.dart';
 class PhotoPicker extends StatefulWidget {
   const PhotoPicker({
     super.key,
-    this.image,
+    this.initialImage,
+    this.initialImageUrl,
     this.onChanged,
   });
 
-  final File? image;
+  final File? initialImage;
+  final String? initialImageUrl;
   final ValueChanged<File?>? onChanged;
 
   @override
@@ -22,17 +24,29 @@ class PhotoPicker extends StatefulWidget {
 class _PhotoPickerState extends State<PhotoPicker> {
   final ImagePicker _picker = ImagePicker();
 
+  File? image;
+
   Future<void> _pickImage() async {
     final XFile? picked = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 85,
     );
 
-    if (picked == null) return;
+    if (picked != null) {
+      final selectedImage = File(picked.path);
 
-    final selectedImage = File(picked.path);
+      setState(() {
+        image = selectedImage;
+      });
 
-    widget.onChanged?.call(selectedImage);
+      widget.onChanged?.call(selectedImage);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    image = widget.initialImage;
   }
 
   @override
@@ -47,22 +61,32 @@ class _PhotoPickerState extends State<PhotoPicker> {
             decoration: BoxDecoration(
               color: AppColors.bgPhoto,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.borderPhoto,
-              ),
+              border: Border.all(color: AppColors.borderPhoto),
             ),
             clipBehavior: Clip.antiAlias,
-            child: widget.image == null
-                ? const Center(
+            child: image != null
+                ? Image.file(image!, fit: BoxFit.cover)
+                : widget.initialImageUrl != null &&
+                      widget.initialImageUrl!.trim().isNotEmpty
+                ? Image.network(
+                    widget.initialImageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: HugeIcon(
+                          icon: HugeIcons.strokeRoundedImageUpload,
+                          size: 35,
+                          color: AppColors.textSecondary,
+                        ),
+                      );
+                    },
+                  )
+                : const Center(
                     child: HugeIcon(
                       icon: HugeIcons.strokeRoundedImageUpload,
                       size: 35,
                       color: AppColors.textSecondary,
                     ),
-                  )
-                : Image.file(
-                    widget.image!,
-                    fit: BoxFit.cover,
                   ),
           ),
 
@@ -73,7 +97,9 @@ class _PhotoPickerState extends State<PhotoPicker> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  widget.image == null
+                  image == null &&
+                          (widget.initialImageUrl == null ||
+                              widget.initialImageUrl!.isEmpty)
                       ? "Upload Photo"
                       : "Change Photo",
                   style: const TextStyle(

@@ -78,7 +78,7 @@ class LocationTrackingService {
               userId: userId,
               latitude: position.latitude,
               longitude: position.longitude,
-              timestamp: position.timestamp,
+              timestamp: position.timestamp.toUtc(),
             )
             .catchError((_) {});
       },

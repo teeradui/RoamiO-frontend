@@ -60,7 +60,7 @@ class _Step1TripInfoState extends State<Step1TripInfo> {
         mainAxisSize: MainAxisSize.min,
         children: [
           PhotoPicker(
-            image: viewModel.tripPhoto,
+            initialImage: viewModel.tripPhoto,
             onChanged: viewModel.setTripPhoto,
           ),
 

@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 import '../../config/api_config.dart';
 import '../../config/auth_headers.dart';
@@ -15,9 +17,9 @@ class TripRepository {
   final Map<String, List<Trip>> _statusCache = {};
   final Map<String, Trip> _tripCache = {};
   void _invalidateCache() {
-  _statusCache.clear();
-  _tripCache.clear();
-}
+    _statusCache.clear();
+    _tripCache.clear();
+  }
 
   Future<Trip> insert(Trip trip, File? image) async {
     final uri = Uri.parse(ApiConfig.trips);
@@ -59,7 +61,20 @@ class TripRepository {
     });
 
     if (image != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+      final mimeType = lookupMimeType(image.path) ?? 'image/jpeg';
+
+      final mimeParts = mimeType.split('/');
+
+      debugPrint('IMAGE PATH: ${image.path}');
+      debugPrint('IMAGE MIME TYPE: $mimeType');
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image',
+          image.path,
+          contentType: MediaType(mimeParts[0], mimeParts[1]),
+        ),
+      );
     }
 
     print('Multipart fields: ${request.fields}');

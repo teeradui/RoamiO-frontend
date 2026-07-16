@@ -25,6 +25,7 @@ dependencies:
   flutter_google_places_sdk: ^0.4.3
   lottie: ^3.5.1
   provider: ^6.1.2
+  mime: ^2.0.0
 
 dev_dependencies:
   flutter_test:

@@ -137,7 +137,8 @@ class _EditTripScreenState extends State<EditTripScreen> {
                     child: Column(
                       children: [
                         PhotoPicker(
-                          image: viewModel.tripPhoto,
+                          initialImage: viewModel.tripPhoto,
+                          initialImageUrl: viewModel.existingImageUrl,
                           onChanged: (image) {
                             viewModel.setTripPhoto(image);
                           },

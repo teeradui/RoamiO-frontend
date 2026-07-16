@@ -119,10 +119,44 @@ class CreateTripViewModel extends ChangeNotifier {
   }
 
   /// Builds "HH:mm" from TimeOfDay, e.g. 9:05 -> "09:05".
-  String _formatStartTime(TimeOfDay time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+  DateTime _buildStartDateUtc() {
+    if (startDate == null) {
+      throw Exception('Start date is null');
+    }
+
+    final localDate = DateTime(
+      startDate!.year,
+      startDate!.month,
+      startDate!.day,
+    );
+
+    return localDate.toUtc();
+  }
+
+  DateTime _buildEndDateUtc() {
+    if (endDate == null) {
+      throw Exception('End date is null');
+    }
+
+    final localDate = DateTime(endDate!.year, endDate!.month, endDate!.day);
+
+    return localDate.toUtc();
+  }
+
+  DateTime _buildStartDateTimeUtc() {
+    if (startDate == null || startTime == null) {
+      throw Exception('Start date or start time is null');
+    }
+
+    final localDateTime = DateTime(
+      startDate!.year,
+      startDate!.month,
+      startDate!.day,
+      startTime!.hour,
+      startTime!.minute,
+    );
+
+    return localDateTime.toUtc();
   }
 
   /// Combines country + state into a single destination string.
@@ -156,9 +190,9 @@ class CreateTripViewModel extends ChangeNotifier {
     try {
       final trip = Trip(
         tripName: tripName.trim(),
-        startDate: startDate,
-        endDate: endDate,
-        startTime: _formatStartTime(startTime!),
+        startDate: _buildStartDateUtc(),
+        endDate: _buildEndDateUtc(),
+        startTime: _buildStartDateTimeUtc(),
         tripDestination: _buildTripDestination(),
         meetingPointName: _buildMeetingPointText(),
         meetingPointLat: (meetingPoint?['lat'] as num?)?.toDouble(),
@@ -239,7 +273,7 @@ photo: ${tripPhoto?.path}
   }
 
   void clearError() {
-  errorMessage = null;
-  notifyListeners();
-}
+    errorMessage = null;
+    notifyListeners();
+  }
 }

@@ -71,7 +71,7 @@ class TripLocationRepository {
         'user_id': userId,
         'latitude': latitude,
         'longitude': longitude,
-        'location_timestamp': timestamp?.toIso8601String(),
+        'location_timestamp': timestamp?.toUtc().toIso8601String(),
       }),
     );
 

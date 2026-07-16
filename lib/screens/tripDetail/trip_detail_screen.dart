@@ -21,6 +21,7 @@ class TripDetailScreen extends StatefulWidget {
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
   late final TripDetailViewModel viewModel;
+  bool _tripChanged = false;
 
   @override
   void initState() {
@@ -213,28 +214,133 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
     if (!mounted) return;
 
-    if (!success) {
-      await _showActionError(
-        viewModel.actionErrorMessage ?? "Unable to end trip.",
-      );
+    if (success) {
+      setState(() {
+        _tripChanged = true;
+      });
 
-      viewModel.clearActionError();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Trip ended successfully.")));
+
+      return;
     }
+
+    await _showActionError(
+      viewModel.actionErrorMessage ?? "Unable to end trip.",
+    );
+
+    viewModel.clearActionError();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: viewModel,
-      builder: (context, _) {
-        if (viewModel.isLoading) {
-          return const Scaffold(
-            backgroundColor: AppColors.bgPrimary,
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
 
-        if (viewModel.errorMessage != null) {
+        Navigator.pop(context, _tripChanged);
+      },
+      child: AnimatedBuilder(
+        animation: viewModel,
+        builder: (context, _) {
+          if (viewModel.isLoading) {
+            return const Scaffold(
+              backgroundColor: AppColors.bgPrimary,
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (viewModel.errorMessage != null) {
+            return Scaffold(
+              backgroundColor: AppColors.bgPrimary,
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              Navigator.pop(context, _tripChanged);
+                            },
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const Text(
+                            "Trip Detail",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                size: 48,
+                                color: AppColors.btnPrimary,
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              Text(
+                                viewModel.errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+
+                              const SizedBox(height: 18),
+
+                              SizedBox(
+                                width: 140,
+                                height: 46,
+                                child: ElevatedButton(
+                                  onPressed: viewModel.loadTrip,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.btnPrimary,
+                                    foregroundColor: AppColors.bgPrimary,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    "Try Again",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           return Scaffold(
             backgroundColor: AppColors.bgPrimary,
             body: SafeArea(
@@ -245,71 +351,327 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                     child: Row(
                       children: [
                         IconButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            Navigator.pop(context, _tripChanged);
+                          },
                           icon: const Icon(
                             Icons.arrow_back_ios_new,
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        const Text(
-                          "Trip Detail",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+
+                        const Expanded(
+                          child: Text(
+                            "Trip Detail",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ),
+
+                        const Spacer(),
+
+                        viewModel.isActive
+                            ? InkWell(
+                                onTap: viewModel.isProcessingAction
+                                    ? null
+                                    : _handleEndTrip,
+                                borderRadius: BorderRadius.circular(100),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFFF6666,
+                                    ).withValues(alpha: 0.26),
+                                    borderRadius: BorderRadius.circular(100),
+                                  ),
+                                  child: const Text(
+                                    "End Trip",
+                                    style: TextStyle(
+                                      color: AppColors.red,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : InkWell(
+                                onTap: viewModel.isProcessingAction
+                                    ? null
+                                    : _handleDeleteTrip,
+                                borderRadius: BorderRadius.circular(99),
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: const Color(
+                                      0xFFFF6666,
+                                    ).withValues(alpha: 0.26),
+                                  ),
+                                  child: const Center(
+                                    child: HugeIcon(
+                                      icon: HugeIcons.strokeRoundedDelete02,
+                                      color: AppColors.red,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
                       ],
                     ),
                   ),
 
                   Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              size: 48,
-                              color: AppColors.btnPrimary,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.bgCard,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: .04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Center(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      height: 120,
+                                      width: 120,
+                                      color: AppColors.bgAccent,
+                                      child:
+                                          viewModel.imageUrl == null ||
+                                              viewModel.imageUrl!.trim().isEmpty
+                                          ? const Icon(
+                                              Icons.image_outlined,
+                                              size: 48,
+                                              color: AppColors.textSecondary,
+                                            )
+                                          : Image.network(
+                                              viewModel.imageUrl!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    debugPrint(
+                                                      'LOAD TRIP DETAIL IMAGE ERROR: $error',
+                                                    );
 
-                            const SizedBox(height: 12),
-
-                            Text(
-                              viewModel.errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            SizedBox(
-                              width: 140,
-                              height: 46,
-                              child: ElevatedButton(
-                                onPressed: viewModel.loadTrip,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.btnPrimary,
-                                  foregroundColor: AppColors.bgPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                                                    return const Icon(
+                                                      Icons
+                                                          .broken_image_outlined,
+                                                      size: 48,
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    );
+                                                  },
+                                            ),
+                                    ),
                                   ),
                                 ),
-                                child: const Text(
-                                  "Try Again",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+
+                                const SizedBox(height: 1),
+
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      viewModel.tripName,
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () async {
+                                        final updated =
+                                            await Navigator.push<bool>(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => EditTripScreen(
+                                                  tripId: viewModel.tripId,
+                                                ),
+                                              ),
+                                            );
+
+                                        if (!mounted) return;
+
+                                        if (updated == true) {
+                                          _tripChanged = true;
+
+                                          await viewModel.loadTrip(
+                                            forceRefresh: true,
+                                          );
+                                        }
+                                      },
+                                      icon: const HugeIcon(
+                                        icon:
+                                            HugeIcons.strokeRoundedPencilEdit01,
+                                        color: AppColors.iconOrange,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+
+                                const SizedBox(height: 2),
+
+                                Text(
+                                  viewModel.destination,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                Center(
+                                  child: _InfoRow(
+                                    icon: viewModel.statusIcon,
+                                    iconColor: viewModel.statusColor,
+                                    text: viewModel.statusText,
+                                    textColor: viewModel.statusColor,
+                                    backgroundColor:
+                                        viewModel.statusBackgroundColor,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                Center(
+                                  child: _InfoRow(
+                                    icon: Icons.calendar_today_outlined,
+                                    text:
+                                        "${viewModel.startDate} — ${viewModel.endDate}",
+                                  ),
+                                ),
+
+                                const SizedBox(height: 2),
+
+                                Center(
+                                  child: _InfoRow(
+                                    icon: Icons.location_on_outlined,
+                                    text: viewModel.meetingPointText,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                Container(
+                                  width: double.infinity,
+                                  height: 60,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.bgAccent,
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const HugeIcon(
+                                        icon: HugeIcons.strokeRoundedRoute03,
+                                        color: AppColors.iconOrange,
+                                      ),
+
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        "Travel Distance",
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        "${viewModel.distanceKm.toStringAsFixed(1)} km",
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                Center(
+                                  child: SizedBox(
+                                    height: 56,
+                                    width:
+                                        48 +
+                                        (viewModel.members.length - 1) * 30,
+                                    child: Stack(
+                                      children: List.generate(
+                                        viewModel.members.length,
+                                        (index) {
+                                          final member =
+                                              viewModel.members[index];
+
+                                          return Positioned(
+                                            left: index * 30.0,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: AppColors.bgCard,
+                                                  width: 3,
+                                                ),
+                                              ),
+                                              child: CircleAvatar(
+                                                radius: 24,
+                                                backgroundColor:
+                                                    AppColors.bgAccent,
+                                                backgroundImage:
+                                                    member.imageUrl != null
+                                                    ? NetworkImage(
+                                                        member.imageUrl!,
+                                                      )
+                                                    : null,
+                                                child: member.imageUrl == null
+                                                    ? const Icon(
+                                                        Icons.person,
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                      )
+                                                    : null,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 12),
+                          TripDetailSectionTab(viewModel: viewModel),
+
+                          const SizedBox(height: 18),
+
+                          _buildSelectedSection(),
+                        ],
                       ),
                     ),
                   ),
@@ -317,319 +679,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               ),
             ),
           );
-        }
-
-        return Scaffold(
-          backgroundColor: AppColors.bgPrimary,
-          body: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-
-                      const Expanded(
-                        child: Text(
-                          "Trip Detail",
-                          textAlign: TextAlign.justify,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      viewModel.isActive
-                          ? InkWell(
-                              onTap: viewModel.isProcessingAction
-                                  ? null
-                                  : _handleEndTrip,
-                              borderRadius: BorderRadius.circular(100),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFFFF6666,
-                                  ).withValues(alpha: 0.26),
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                                child: const Text(
-                                  "End Trip",
-                                  style: TextStyle(
-                                    color: AppColors.red,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : InkWell(
-                              onTap: viewModel.isProcessingAction
-                                  ? null
-                                  : _handleDeleteTrip,
-                              borderRadius: BorderRadius.circular(99),
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(
-                                    0xFFFF6666,
-                                  ).withValues(alpha: 0.26),
-                                ),
-                                child: const Center(
-                                  child: HugeIcon(
-                                    icon: HugeIcons.strokeRoundedDelete02,
-                                    color: AppColors.red,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ],
-                  ),
-                ),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.bgCard,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: .04),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Center(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
-                                    height: 120,
-                                    width: 120,
-                                    color: AppColors.bgAccent,
-                                    child: const Icon(
-                                      Icons.image_outlined,
-                                      size: 48,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 1),
-
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    viewModel.tripName,
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    onPressed: () async {
-                                      final updated =
-                                          await Navigator.push<bool>(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => EditTripScreen(
-                                                tripId: viewModel.tripId,
-                                              ),
-                                            ),
-                                          );
-
-                                      if (!mounted) return;
-
-                                      if (updated == true) {
-                                        await viewModel.loadTrip(
-                                          forceRefresh: true,
-                                        );
-                                      }
-                                    },
-                                    icon: const HugeIcon(
-                                      icon: HugeIcons.strokeRoundedPencilEdit01,
-                                      color: AppColors.iconOrange,
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 2),
-
-                              Text(
-                                viewModel.destination,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              Center(
-                                child: _InfoRow(
-                                  icon: viewModel.statusIcon,
-                                  iconColor: viewModel.statusColor,
-                                  text: viewModel.statusText,
-                                  textColor: viewModel.statusColor,
-                                  backgroundColor:
-                                      viewModel.statusBackgroundColor,
-                                ),
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              Center(
-                                child: _InfoRow(
-                                  icon: Icons.calendar_today_outlined,
-                                  text:
-                                      "${viewModel.startDate} — ${viewModel.endDate}",
-                                ),
-                              ),
-
-                              const SizedBox(height: 2),
-
-                              Center(
-                                child: _InfoRow(
-                                  icon: Icons.location_on_outlined,
-                                  text: viewModel.meetingPointText,
-                                ),
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              Container(
-                                width: double.infinity,
-                                height: 60,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppColors.bgAccent,
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const HugeIcon(
-                                      icon: HugeIcons.strokeRoundedRoute03,
-                                      color: AppColors.iconOrange,
-                                    ),
-
-                                    const SizedBox(width: 12),
-                                    const Text(
-                                      "Travel Distance",
-                                      style: TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      "${viewModel.distanceKm.toStringAsFixed(1)} km",
-                                      style: const TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              Center(
-                                child: SizedBox(
-                                  height: 56,
-                                  width:
-                                      48 + (viewModel.members.length - 1) * 30,
-                                  child: Stack(
-                                    children: List.generate(
-                                      viewModel.members.length,
-                                      (index) {
-                                        final member = viewModel.members[index];
-
-                                        return Positioned(
-                                          left: index * 30.0,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: AppColors.bgCard,
-                                                width: 3,
-                                              ),
-                                            ),
-                                            child: CircleAvatar(
-                                              radius: 24,
-                                              backgroundColor:
-                                                  AppColors.bgAccent,
-                                              backgroundImage:
-                                                  member.imageUrl != null
-                                                  ? NetworkImage(
-                                                      member.imageUrl!,
-                                                    )
-                                                  : null,
-                                              child: member.imageUrl == null
-                                                  ? const Icon(
-                                                      Icons.person,
-                                                      color: AppColors
-                                                          .textSecondary,
-                                                    )
-                                                  : null,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TripDetailSectionTab(viewModel: viewModel),
-
-                        const SizedBox(height: 18),
-
-                        _buildSelectedSection(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }

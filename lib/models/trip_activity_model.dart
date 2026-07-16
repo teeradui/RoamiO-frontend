@@ -29,8 +29,8 @@ class TripActivity {
       locationName: json['locationName'],
       locationType: json['locationType'],
       activityType: json['activityType'],
-      startTime: json['startTime'] != null ? DateTime.tryParse(json['startTime']) : null,
-      endTime: json['endTime'] != null ? DateTime.tryParse(json['endTime']) : null,
+      startTime: json['startTime'] != null ? DateTime.tryParse(json['startTime'])?.toLocal() : null,
+      endTime: json['endTime'] != null ? DateTime.tryParse(json['endTime'])?.toLocal() : null,
       duration: json['duration'],
     );
   }

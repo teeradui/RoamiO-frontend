@@ -28,7 +28,7 @@ class TripNotification {
       message: json['message'],
       referenceId: json['referenceId']?.toString(),
       isRead: json['isRead'] ?? false,
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'])?.toLocal() : null,
     );
   }
 }

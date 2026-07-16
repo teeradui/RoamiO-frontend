@@ -83,7 +83,7 @@ class Step3Success extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          SizedBox(
+          /*SizedBox(
             width: 180,
             height: 50,
             child: ElevatedButton(
@@ -103,7 +103,7 @@ class Step3Success extends StatelessWidget {
                 ),
               ),
             ),
-          ),
+          ),*/
 
           const SizedBox(height: 20),
 

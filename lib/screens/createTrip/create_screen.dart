@@ -45,6 +45,8 @@ class _CreateTripScreenBodyState extends State<_CreateTripScreenBody> {
   }
 
   Widget _buildStep() {
+    final viewModel = context.watch<CreateTripViewModel>();
+    
     switch (currentStep) {
       case 0:
         return Step1TripInfo(onNext: nextStep);

@@ -53,7 +53,7 @@ class TripDetailViewModel extends ChangeNotifier {
   String tripName = "";
   String destination = "";
   String? meetingPoint;
-
+  String? imageUrl;
   String startDate = "";
   String endDate = "";
   String startTime = "";
@@ -93,34 +93,22 @@ class TripDetailViewModel extends ChangeNotifier {
 
   String _formatDate(DateTime? date) {
     if (date == null) return '';
-    return '${date.day} ${_months[date.month - 1]} ${date.year}';
+
+    final localDate = date.toLocal();
+
+    return '${localDate.day} '
+        '${_months[localDate.month - 1]} '
+        '${localDate.year}';
   }
 
   /// "14:05" -> "02:05 PM"
-  String _formatTime(String? time) {
-    if (time == null || time.trim().isEmpty) return '';
+  String _formatTime(DateTime? time) {
+    if (time == null) return '';
 
-    int? hour;
-    int? minute;
+    final localTime = time.toLocal();
 
-    // กรณี Backend ส่ง Timestamp เต็ม
-    final parsedDateTime = DateTime.tryParse(time);
-
-    if (parsedDateTime != null) {
-      final localTime = parsedDateTime.toLocal();
-      hour = localTime.hour;
-      minute = localTime.minute;
-    } else {
-      // กรณี Backend ส่งเฉพาะ HH:mm หรือ HH:mm:ss
-      final parts = time.split(':');
-
-      if (parts.length < 2) return time;
-
-      hour = int.tryParse(parts[0]);
-      minute = int.tryParse(parts[1]);
-    }
-
-    if (hour == null || minute == null) return time;
+    final hour = localTime.hour;
+    final minute = localTime.minute;
 
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour % 12 == 0 ? 12 : hour % 12;
@@ -146,37 +134,35 @@ class TripDetailViewModel extends ChangeNotifier {
       tripName = trip.tripName;
       destination = trip.tripDestination ?? '';
       meetingPoint = trip.meetingPointName;
+      imageUrl = trip.imageUrl;
+
       startDate = _formatDate(trip.startDate);
       endDate = _formatDate(trip.endDate);
       startTime = _formatTime(trip.startTime);
       status = _fromModelStatus(trip.tripStatus);
 
-      // Location tracking should run for as long as the trip is Active —
-      // this covers the case where the screen is (re)opened on a trip
-      // that's already active (e.g. app restart), not just the endTrip
-      // transition below.
       if (status == TripStatus.active) {
         _locationTrackingService.start(tripId, userId: _currentUserId);
       } else {
-        _locationTrackingService.stop();
+        await _locationTrackingService.stop();
       }
 
-      // NOTE: TripMemberResponseDto only exposes userId, not a display name
-      // or avatar — there's no user-lookup endpoint yet to resolve either.
-      // Falling back to userId as the label until one exists.
       members = fetchedMembers
-          .map((m) => TripMember(username: m.userId))
+          .map((member) => TripMember(username: member.userId))
           .toList();
 
       if (members.isEmpty && trip.createdBy.isNotEmpty) {
         members = [TripMember(username: trip.createdBy)];
       }
-    } catch (e) {
-      errorMessage = "Unable to load trip details.";
-    }
+    } catch (error, stackTrace) {
+      debugPrint('LOAD TRIP DETAIL ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
 
-    isLoading = false;
-    notifyListeners();
+      errorMessage = "Unable to load trip details.";
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   bool get isUpcoming => status == TripStatus.upcoming;
@@ -269,14 +255,15 @@ class TripDetailViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updatedTrip = await _tripService.updateTripStatus(
+      await _tripService.updateTripStatus(
         tripId,
         trip_model.TripStatus.completed,
       );
 
-      status = _fromModelStatus(updatedTrip.tripStatus);
-
       await _locationTrackingService.stop();
+
+      // โหลดข้อมูล Trip ใหม่จาก backend ทันที
+      await loadTrip(forceRefresh: true);
 
       return true;
     } catch (error, stackTrace) {

@@ -56,7 +56,8 @@ class EditTripViewModel extends ChangeNotifier {
     tripName = trip.tripName;
     startDate = trip.startDate;
     endDate = trip.endDate;
-    startTime = _parseStartTime(trip.startTime);
+    startTime = _toTimeOfDay(trip.startTime);
+    existingImageUrl = trip.imageUrl;
 
     if (trip.meetingPointName != null &&
         trip.meetingPointName!.trim().isNotEmpty) {
@@ -73,36 +74,12 @@ class EditTripViewModel extends ChangeNotifier {
     _applyDestination(trip.tripDestination);
   }
 
-  TimeOfDay? _parseStartTime(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return null;
-    }
+  TimeOfDay? _toTimeOfDay(DateTime? value) {
+    if (value == null) return null;
 
-    // กรณี Backend ส่ง timestamp เต็ม
-    // เช่น 2026-07-31T12:12:00.000
-    final parsedDateTime = DateTime.tryParse(value);
+    final localDateTime = value.toLocal();
 
-    if (parsedDateTime != null) {
-      final localDateTime = parsedDateTime.toLocal();
-
-      return TimeOfDay(hour: localDateTime.hour, minute: localDateTime.minute);
-    }
-
-    // กรณี Backend ส่งเฉพาะเวลา เช่น 12:12 หรือ 12:12:00
-    final parts = value.split(':');
-
-    if (parts.length < 2) {
-      return null;
-    }
-
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-
-    if (hour == null || minute == null) {
-      return null;
-    }
-
-    return TimeOfDay(hour: hour, minute: minute);
+    return TimeOfDay(hour: localDateTime.hour, minute: localDateTime.minute);
   }
 
   void _applyDestination(String? destination) {
@@ -187,12 +164,6 @@ class EditTripViewModel extends ChangeNotifier {
         isStartTimeValid;
   }
 
-  String _formatStartTime(TimeOfDay time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
   String? _buildTripDestination() {
     final countryName = selectedCountry?['name'] as String?;
     final stateName = selectedState?['name'] as String?;
@@ -215,32 +186,58 @@ class EditTripViewModel extends ChangeNotifier {
     return value.trim();
   }
 
+  DateTime _buildLocalStartDate() {
+    return DateTime(startDate!.year, startDate!.month, startDate!.day);
+  }
+
+  DateTime _buildLocalEndDate() {
+    return DateTime(endDate!.year, endDate!.month, endDate!.day);
+  }
+
+  DateTime _buildLocalStartDateTime() {
+    return DateTime(
+      startDate!.year,
+      startDate!.month,
+      startDate!.day,
+      startTime!.hour,
+      startTime!.minute,
+    );
+  }
+
   Map<String, dynamic> _buildChangedFields() {
     final fields = <String, dynamic>{};
 
-    if (istripNameValid) fields['tripName'] = tripName.trim();
-    if (startDate != null) fields['startDate'] = startDate!.toIso8601String();
-    if (endDate != null) fields['endDate'] = endDate!.toIso8601String();
-    if (startDate != null && startTime != null) {
-      final startDateTime = DateTime(
-        startDate!.year,
-        startDate!.month,
-        startDate!.day,
-        startTime!.hour,
-        startTime!.minute,
-      );
+    if (istripNameValid) {
+      fields['tripName'] = tripName.trim();
+    }
 
-      fields['startTime'] = startDateTime.toIso8601String();
+    if (startDate != null) {
+      fields['startDate'] = _buildLocalStartDate().toUtc().toIso8601String();
+    }
+
+    if (endDate != null) {
+      fields['endDate'] = _buildLocalEndDate().toUtc().toIso8601String();
+    }
+
+    if (startDate != null && startTime != null) {
+      fields['startTime'] = _buildLocalStartDateTime()
+          .toUtc()
+          .toIso8601String();
     }
 
     final destination = _buildTripDestination();
-    if (destination != null) fields['tripDestination'] = destination;
+
+    if (destination != null) {
+      fields['tripDestination'] = destination;
+    }
 
     final meetingPointText = _buildMeetingPointText();
 
     if (meetingPointText != null) {
       fields['meetingPointName'] = meetingPointText;
+
       fields['meetingPointLat'] = (meetingPoint?['lat'] as num?)?.toDouble();
+
       fields['meetingPointLon'] = (meetingPoint?['lng'] as num?)?.toDouble();
     } else {
       fields['meetingPointName'] = null;
