@@ -36,13 +36,23 @@ class TripCardViewModel extends ChangeNotifier {
   final String tripId;
   final String tripName;
   final String tripDestination;
-  final String startDate;
+  final DateTime? startDate;
   final int photoCount;
   final int placeCount;
   final String? imageUrl;
   final List<TripCardMember> members;
 
   TripStatus status;
+
+  String get formattedStartDate {
+    if (startDate == null) return '-';
+
+    final localDate = startDate!.toLocal();
+
+    return '${localDate.day.toString().padLeft(2, '0')}/'
+        '${localDate.month.toString().padLeft(2, '0')}/'
+        '${localDate.year}';
+  }
 
   String get statusText {
     switch (status) {

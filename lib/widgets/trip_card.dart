@@ -154,7 +154,7 @@ class TripCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        viewModel.startDate,
+                        viewModel.formattedStartDate,
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.textSecondary,

@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/invite_friends_view_model.dart';
 
-/// Bottom sheet reusing the same friend-picking logic as
-/// Step2InviteFriends (search, multi-select, sendInvites), but scoped to
-/// inviting more people into an *existing* trip rather than during trip
-/// creation. Returns true via Navigator.pop if at least one invite was
-/// attempted, so the caller knows whether to refresh anything.
+
 Future<void> showInviteMemberSheet(BuildContext context, String tripId) {
   return showModalBottomSheet(
     context: context,

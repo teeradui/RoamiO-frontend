@@ -31,25 +31,21 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _openTripDetail(String tripId) async {
-  final changed = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(
-      builder: (_) => TripDetailScreen(
-        tripId: tripId,
-      ),
-    ),
-  );
-
-  if (!mounted) return;
-
-  if (changed == true) {
-    await viewModel.loadTrips(
-      forceRefresh: true,
-    );
+  Future<void> _refreshHome() async {
+    await viewModel.loadTrips(forceRefresh: true);
   }
-}
 
-  
+  Future<void> _openTripDetail(String tripId) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => TripDetailScreen(tripId: tripId)),
+    );
+
+    if (!mounted) return;
+
+    if (changed == true) {
+      await viewModel.loadTrips(forceRefresh: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,49 +59,57 @@ class _HomeScreenState extends State<HomeScreen> {
               return const Center(child: CircularProgressIndicator());
             }
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const HomeHeader(),
-                  const SizedBox(height: 16),
+            return RefreshIndicator(
+              onRefresh: _refreshHome,
+              color: AppColors.btnPrimary,
+              backgroundColor: AppColors.bgCard,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const HomeHeader(),
+                    const SizedBox(height: 16),
 
-                  TripFilterBar(
-                    selectedFilter: viewModel.selectedFilter,
-                    onChanged: viewModel.changeFilter,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  if (viewModel.selectedFilter == TripFilter.all) ...[
-                    UpcomingActiveSection(
-                      trips: viewModel.upcomingActiveTrips,
-                      onTripTap: _openTripDetail,
+                    TripFilterBar(
+                      selectedFilter: viewModel.selectedFilter,
+                      onChanged: viewModel.changeFilter,
                     ),
 
                     const SizedBox(height: 24),
 
-                    CompletedSection(
-                      trips: viewModel.completedTrips,
-                      onTripTap: _openTripDetail,
-                    ),
-                  ] else ...[
-                    if (viewModel.hasFilteredTrips)
-                      Column(
-                        children: viewModel.filteredTrips.map((trip) {
-                          return TripCard(
-                            viewModel: trip,
-                            onTap: () => _openTripDetail(trip.tripId),
-                          );
-                        }).toList(),
-                      )
-                    else
-                      viewModel.selectedFilter == TripFilter.completed
-                          ? const _CompletedEmptyState()
-                          : const _UpcomingActiveEmptyState(),
+                    if (viewModel.selectedFilter == TripFilter.all) ...[
+                      UpcomingActiveSection(
+                        trips: viewModel.upcomingActiveTrips,
+                        onTripTap: _openTripDetail,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      CompletedSection(
+                        trips: viewModel.completedTrips,
+                        onTripTap: _openTripDetail,
+                      ),
+                    ] else ...[
+                      if (viewModel.hasFilteredTrips)
+                        Column(
+                          children: viewModel.filteredTrips.map((trip) {
+                            return TripCard(
+                              viewModel: trip,
+                              onTap: () => _openTripDetail(trip.tripId),
+                            );
+                          }).toList(),
+                        )
+                      else
+                        viewModel.selectedFilter == TripFilter.completed
+                            ? const _CompletedEmptyState()
+                            : const _UpcomingActiveEmptyState(),
+                    ],
+
+                    const SizedBox(height: 80),
                   ],
-                ],
+                ),
               ),
             );
           },
@@ -113,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
 }
 
 class _UpcomingActiveEmptyState extends StatelessWidget {
@@ -174,5 +177,4 @@ class _CompletedEmptyState extends StatelessWidget {
       ),
     );
   }
-  
 }
