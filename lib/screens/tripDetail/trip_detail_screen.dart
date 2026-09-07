@@ -6,9 +6,11 @@ import 'package:roamio_frontend/screens/tripDetail/widgets/map_section.dart';
 import 'package:roamio_frontend/screens/tripDetail/widgets/member_section.dart';
 import 'package:roamio_frontend/screens/tripDetail/widgets/overview_section.dart';
 import 'package:roamio_frontend/screens/tripDetail/widgets/photo_section.dart';
+import 'package:roamio_frontend/screens/tripStory/story_slide_screen.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 import 'package:roamio_frontend/screens/tripDetail/widgets/section_tab.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 
 class TripDetailScreen extends StatefulWidget {
   const TripDetailScreen({super.key, required this.tripId});
@@ -52,7 +54,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       case TripDetailSection.activities:
         return ActivitiesSection(tripId: widget.tripId);
       case TripDetailSection.photo:
-        return PhotoSection();
+        return PhotoSection(tripId: widget.tripId, tripStatus: viewModel.status);
       case TripDetailSection.member:
         return MemberSection(tripId: widget.tripId);
     }
@@ -188,7 +190,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (!mounted) return;
 
     if (success) {
-      // ส่ง true กลับไปให้หน้า Home รู้ว่าต้อง refresh
       Navigator.pop(context, true);
       return;
     }
@@ -666,6 +667,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
+
+                          if (viewModel.isCompleted) ...[
+                            _ViewTripStoryButton(tripId: widget.tripId),
+
+                            const SizedBox(height: 12),
+                          ],
                           TripDetailSectionTab(viewModel: viewModel),
 
                           const SizedBox(height: 18),
@@ -734,5 +741,61 @@ class _InfoRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _ViewTripStoryButton extends StatelessWidget {
+  const _ViewTripStoryButton({required this.tripId});
+
+  final String tripId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      
+        width: double.infinity,
+        height: 52,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: ElevatedButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => StorySlideScreen(tripId: tripId)),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.bgCard,
+            foregroundColor: AppColors.textPrimary,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          icon: ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: AppColors.sparkle,
+            ).createShader(bounds),
+            child: const Icon(
+              FluentIcons.sparkle_32_filled,
+              size: 20,
+              color: Colors.white,
+            ),
+          ),
+          label: const Text(
+            "View Trip Wrap-up Story",
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
   }
 }

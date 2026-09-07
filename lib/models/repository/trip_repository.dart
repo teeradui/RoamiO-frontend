@@ -21,6 +21,66 @@ class TripRepository {
     _tripCache.clear();
   }
 
+  Future<http.MultipartFile> _buildImageMultipart(File image) async {
+    final bytes = await image
+        .openRead(0, 16)
+        .fold<List<int>>(<int>[], (previous, chunk) => previous..addAll(chunk));
+
+    final detectedMimeType = lookupMimeType(
+      image.path,
+      headerBytes: bytes,
+    )?.toLowerCase();
+
+    debugPrint('IMAGE PATH: ${image.path}');
+    debugPrint('DETECTED IMAGE MIME TYPE: $detectedMimeType');
+
+    late final MediaType contentType;
+    late final String filename;
+
+    switch (detectedMimeType) {
+      case 'image/jpeg':
+      case 'image/jpg':
+        contentType = MediaType('image', 'jpeg');
+        filename = 'trip_image.jpg';
+        break;
+
+      case 'image/png':
+        contentType = MediaType('image', 'png');
+        filename = 'trip_image.png';
+        break;
+
+      case 'image/webp':
+        contentType = MediaType('image', 'webp');
+        filename = 'trip_image.webp';
+        break;
+
+      case 'image/heic':
+      case 'image/heif':
+        throw Exception(
+          'HEIC images are not supported. '
+          'Please select a JPEG, PNG, or WEBP image.',
+        );
+
+      default:
+        throw Exception(
+          'Unsupported image format: ${detectedMimeType ?? 'unknown'}. '
+          'Only JPEG, PNG, and WEBP are allowed.',
+        );
+    }
+
+    debugPrint(
+      'UPLOAD CONTENT TYPE: ${contentType.type}/${contentType.subtype}',
+    );
+    debugPrint('UPLOAD FILENAME: $filename');
+
+    return http.MultipartFile.fromPath(
+      'image',
+      image.path,
+      filename: filename,
+      contentType: contentType,
+    );
+  }
+
   Future<Trip> insert(Trip trip, File? image) async {
     final uri = Uri.parse(ApiConfig.trips);
     final request = http.MultipartRequest('POST', uri);
@@ -43,20 +103,7 @@ class TripRepository {
     });
 
     if (image != null) {
-      final mimeType = lookupMimeType(image.path) ?? 'image/jpeg';
-
-      final mimeParts = mimeType.split('/');
-
-      debugPrint('IMAGE PATH: ${image.path}');
-      debugPrint('IMAGE MIME TYPE: $mimeType');
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image',
-          image.path,
-          contentType: MediaType(mimeParts[0], mimeParts[1]),
-        ),
-      );
+      request.files.add(await _buildImageMultipart(image));
     }
 
     print('Multipart fields: ${request.fields}');
@@ -152,7 +199,7 @@ class TripRepository {
     });
 
     if (image != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+      request.files.add(await _buildImageMultipart(image));
     }
 
     debugPrint('multipart fields: ${request.fields}');

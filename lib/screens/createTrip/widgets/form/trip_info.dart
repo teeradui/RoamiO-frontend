@@ -66,7 +66,6 @@ class _Step1TripInfoState extends State<Step1TripInfo> {
 
           const SizedBox(height: 20),
 
-          /// Trip Name
           const Align(
             alignment: Alignment.centerLeft,
             child: Row(
@@ -251,7 +250,6 @@ class _Step1TripInfoState extends State<Step1TripInfo> {
 
           const SizedBox(height: 8),
 
-          /// Date
           Row(
             children: [
               Expanded(
@@ -305,7 +303,6 @@ class _Step1TripInfoState extends State<Step1TripInfo> {
 
           const SizedBox(height: 8),
 
-          /// Time
           TimeField(
             hint: "Select Time",
             selectedTime: viewModel.startTime,
@@ -341,7 +338,6 @@ class _Step1TripInfoState extends State<Step1TripInfo> {
 
           const SizedBox(height: 8),
 
-          /// Meeting Point
           MeetingPointField(
             value: viewModel.meetingPoint,
             onChanged: viewModel.setMeetingPoint,

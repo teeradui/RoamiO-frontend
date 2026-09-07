@@ -26,7 +26,12 @@ dependencies:
   lottie: ^3.5.1
   provider: ^6.1.2
   mime: ^2.0.0
-
+  fl_chart: ^1.2.0
+  fluentui_system_icons: ^1.1.273
+  confetti: ^0.8.0
+  tabler_icons_plus: ^3.44.0
+  flutter_material_design_icons: ^3.1.0+7447
+  flutter_polyline_points: ^3.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -47,6 +52,34 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
      - assets/Travelisfun.json
+     - assets/roadTrip.json
+     - assets/Trophy.json
+     - assets/Rewardlighteffect.json
+     - assets/Car.json
+     - assets/Confetti.json
+     - assets/Fireworks.json
+     - assets/storyicon.json
+     - assets/storyBg/1.png
+     - assets/storyBg/2.png
+     - assets/storyBg/3.png
+     - assets/storyBg/4.png
+     - assets/storyBg/5.png
+     - assets/storyBg/6.png
+     - assets/storyBg/7.png
+     - assets/storyBg/8.png
+     - assets/storyBg/9.png
+     - assets/storyBg/10.png
+     - assets/storyBg/11.png
+     - assets/storyBg/12.png
+     - assets/storyBg/13.png
+     - assets/storyBg/14.png
+     - assets/storyBg/15.png
+     - assets/storyBg/16.png
+     - assets/storyBg/17.png
+     - assets/storyBg/18.png
+     - assets/storyBg/19.png
+     - assets/storyBg/20.png
+     - assets/storyBg/21.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

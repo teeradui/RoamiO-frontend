@@ -4,6 +4,8 @@ import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/overview_section_view_model.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 
 class OverviewSection extends StatefulWidget {
   const OverviewSection({
@@ -138,6 +140,16 @@ class _OverviewSectionState extends State<OverviewSection> {
               const _UpcomingEmptyOverview()
             else
               _ActiveOverviewCard(viewModel: viewModel),
+
+            if (viewModel.isCompleted) ...[
+              const SizedBox(height: 16),
+
+              _TripSummaryCard(viewModel: viewModel),
+
+              const SizedBox(height: 16),
+
+              _MyActivitiesStatCard(viewModel: viewModel),
+            ],
           ],
         );
       },
@@ -207,7 +219,7 @@ class _ActiveOverviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(10),
@@ -303,7 +315,7 @@ class _ActivitiesDetectedCard extends StatelessWidget {
                 ).createShader(bounds),
                 child: const Icon(
                   MingCuteIcons.mgc_compass_fill,
-                  size: 22,
+                  size: 20,
                   color: Colors.white,
                 ),
               ),
@@ -324,12 +336,12 @@ class _ActivitiesDetectedCard extends StatelessWidget {
           const SizedBox(height: 14),
 
           if (viewModel.hasActivityTypes)
-            Row(
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
               children: viewModel.activityTypes.map((activity) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: _ActivityTypeBadge(activity: activity),
-                );
+                return _ActivityTypeBadge(activity: activity);
               }).toList(),
             )
           else
@@ -351,8 +363,8 @@ class _ActivityTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 88,
-      height: 45,
+      width: 100,
+      height: 55,
       decoration: BoxDecoration(
         color: activity.bgColor,
         borderRadius: BorderRadius.circular(10),
@@ -464,7 +476,7 @@ class _UpcomingEmptyOverview extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 100,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(10),
@@ -479,8 +491,8 @@ class _UpcomingEmptyOverview extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            top: 10,
-            left: 2,
+            top: 14,
+            left: 0,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -534,7 +546,7 @@ class _ActivitiesEmptyOverview extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 100,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(10),
@@ -549,8 +561,8 @@ class _ActivitiesEmptyOverview extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            top: 10,
-            left: 2,
+            top: 14,
+            left: 0,
             child: Row(
               children: [
                 ShaderMask(
@@ -591,6 +603,167 @@ class _ActivitiesEmptyOverview extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TripSummaryCard extends StatelessWidget {
+  const _TripSummaryCard({required this.viewModel});
+
+  final OverviewSectionViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return _RadarSummaryCard(
+      title: "Trip Summary",
+      subtitle: "Group activity statistics",
+      icon: MingCuteIcons.mgc_chart_pie_2_fill,
+      iconGradient: AppColors.iconGroupGraph,
+      data: viewModel.groupActivityStats,
+      emptyMessage: "Trip summary is not available.",
+    );
+  }
+}
+
+class _MyActivitiesStatCard extends StatelessWidget {
+  const _MyActivitiesStatCard({required this.viewModel});
+
+  final OverviewSectionViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return _RadarSummaryCard(
+      title: "My Activities Stat",
+      subtitle: "Your activity statistics",
+      icon: FluentIcons.video_person_sparkle_24_filled,
+      iconGradient: AppColors.iconPersonalGraph,
+      data: viewModel.myActivityStats,
+      emptyMessage: "Trip summary is not available.",
+    );
+  }
+}
+
+class _RadarSummaryCard extends StatelessWidget {
+  const _RadarSummaryCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.iconGradient,
+    required this.data,
+    required this.emptyMessage,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final List<Color> iconGradient;
+  final List<OverviewRadarItem> data;
+  final String emptyMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: iconGradient,
+                ).createShader(bounds),
+                child: Icon(icon, size: 20, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          Padding(
+            padding: const EdgeInsets.only(left: 32),
+            child: Text(
+              subtitle,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          if (data.isEmpty)
+            SizedBox(
+              height: 150,
+              child: Center(
+                child: Text(
+                  emptyMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 250,
+              child: RadarChart(
+                RadarChartData(
+                  radarShape: RadarShape.polygon,
+                  tickCount: 4,
+                  ticksTextStyle: const TextStyle(
+                    color: Colors.transparent,
+                    fontSize: 0,
+                  ),
+                  getTitle: (index, angle) {
+                    return RadarChartTitle(
+                      text: data[index].label,
+                      angle: angle,
+                    );
+                  },
+                  dataSets: [
+                    RadarDataSet(
+                      dataEntries: data
+                          .map((item) => RadarEntry(value: item.value))
+                          .toList(),
+                      borderColor: AppColors.btnPrimary,
+                      fillColor: AppColors.btnPrimary.withValues(alpha: 0.15),
+                      borderWidth: 2,
+                      entryRadius: 3,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

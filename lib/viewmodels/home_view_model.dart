@@ -41,7 +41,11 @@ class HomeViewModel extends ChangeNotifier {
   String _formatDate(DateTime? date) {
     if (date == null) return '';
 
-    return '${date.day} ${_months[date.month - 1]} ${date.year}';
+    final localDate = date.toLocal();
+
+    return '${localDate.day} '
+        '${_months[localDate.month - 1]} '
+        '${localDate.year}';
   }
 
   TripStatus _fromModelStatus(trip_model.TripStatus status) {
@@ -90,7 +94,7 @@ class HomeViewModel extends ChangeNotifier {
       tripDestination: trip.tripDestination?.trim().isNotEmpty == true
           ? trip.tripDestination!
           : 'Unknown destination',
-      startDate: _formatDate(trip.startDate),
+      startDate: trip.startDate,
       photoCount: 0,
       placeCount: 0,
       status: _fromModelStatus(trip.tripStatus),
@@ -127,6 +131,9 @@ class HomeViewModel extends ChangeNotifier {
           'HOME TRIP: '
           'id=${trip.id}, '
           'name=${trip.tripName}, '
+          'rawStartDate=${trip.startDate}, '
+          'localStartDate=${trip.startDate?.toLocal()}, '
+          'formattedStartDate=${_formatDate(trip.startDate)}, '
           'destination=${trip.tripDestination}, '
           'status=${trip.tripStatus}',
         );
@@ -139,13 +146,14 @@ class HomeViewModel extends ChangeNotifier {
       );
 
       for (final trip in trips) {
-        debugPrint(
-          'TRIP CARD: '
-          'tripId=${trip.tripId}, '
-          'tripName=${trip.tripName}, '
-          'destination=${trip.tripDestination}, '
-        );
-      }
+  debugPrint(
+    'TRIP CARD: '
+    'tripId=${trip.tripId}, '
+    'tripName=${trip.tripName}, '
+    'startDate=${trip.startDate}, '
+    'destination=${trip.tripDestination}',
+  );
+}
     } catch (error, stackTrace) {
       debugPrint('LOAD HOME TRIPS ERROR: $error');
       debugPrintStack(stackTrace: stackTrace);
