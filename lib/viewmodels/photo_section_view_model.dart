@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 
 class TripPhotoItem {
   const TripPhotoItem({
@@ -42,10 +43,15 @@ class TripPhotoGroup {
 }
 
 class PhotoSectionViewModel extends ChangeNotifier {
-  PhotoSectionViewModel({required this.tripId, required this.tripStatus}) {
-    // restore album ที่เคยเลือกไว้ใน session นี้
+  PhotoSectionViewModel({
+    required this.tripId,
+    required this.tripStatus,
+    TripSummaryService? tripSummaryService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService() {
     selectedAlbumName = _selectedAlbumCache[tripId] ?? '';
   }
+
+  final TripSummaryService _tripSummaryService;
 
   final String tripId;
   final TripStatus tripStatus;
@@ -219,133 +225,21 @@ class PhotoSectionViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    try {
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+        try {
+      final fetchedPhotos = await _tripSummaryService.getPhotos(tripId);
 
-      // =====================================
-      // TEMP MOCK
-      //
-      // 1 วัน = 5 รูป
-      // มีรูปจากหลาย account
-      // =====================================
-
-      photos = [
-        // =========================
-        // DAY 1 — 5 PHOTOS
-        // =========================
-        TripPhotoItem(
-          id: 'photo_1',
-          imageUrl: 'https://picsum.photos/id/1015/600/600',
-          capturedAt: DateTime(2026, 7, 17, 8, 30),
-          ownerUserId: '1',
-          ownerUsername: 'Jig',
+      photos = fetchedPhotos.map((photo) {
+        return TripPhotoItem(
+          id: photo.photoId,
+          imageUrl: photo.photoUrl,
+          capturedAt: photo.uploadedAt ?? DateTime.now(),
+          ownerUserId: photo.userId ?? '',
+          ownerUsername: photo.userId ?? 'Unknown',
           ownerProfileImageUrl: null,
-          locationName: 'Chiang Mai University',
-          activityType: 'Sightseeing',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_2',
-          imageUrl: 'https://picsum.photos/id/1016/600/600',
-          capturedAt: DateTime(2026, 7, 17, 9, 45),
-          ownerUserId: '2',
-          ownerUsername: 'Sabrina',
-          ownerProfileImageUrl: null,
-          locationName: 'Chiang Mai University',
-          activityType: 'Sightseeing',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_3',
-          imageUrl: 'https://picsum.photos/id/1080/600/600',
-          capturedAt: DateTime(2026, 7, 17, 12, 20),
-          ownerUserId: '3',
-          ownerUsername: 'Cherry',
-          ownerProfileImageUrl: null,
-          locationName: 'One Nimman',
-          activityType: 'Food',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_4',
-          imageUrl: 'https://picsum.photos/id/1025/600/600',
-          capturedAt: DateTime(2026, 7, 17, 15, 10),
-          ownerUserId: '4',
-          ownerUsername: 'Pang',
-          ownerProfileImageUrl: null,
-          locationName: 'Tha Phae Gate',
-          activityType: 'Sightseeing',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_5',
-          imageUrl: 'https://picsum.photos/id/1035/600/600',
-          capturedAt: DateTime(2026, 7, 17, 18, 30),
-          ownerUserId: '2',
-          ownerUsername: 'Sabrina',
-          ownerProfileImageUrl: null,
-          locationName: 'Warorot Market',
-          activityType: 'Food',
-        ),
-
-        // =========================
-        // DAY 2 — 5 PHOTOS
-        // =========================
-        TripPhotoItem(
-          id: 'photo_6',
-          imageUrl: 'https://picsum.photos/id/1043/600/600',
-          capturedAt: DateTime(2026, 7, 18, 8, 15),
-          ownerUserId: '3',
-          ownerUsername: 'Cherry',
-          ownerProfileImageUrl: null,
-          locationName: 'Doi Suthep',
-          activityType: 'Sightseeing',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_7',
-          imageUrl: 'https://picsum.photos/id/1040/600/600',
-          capturedAt: DateTime(2026, 7, 18, 9, 40),
-          ownerUserId: '1',
-          ownerUsername: 'Jig',
-          ownerProfileImageUrl: null,
-          locationName: 'Doi Suthep',
-          activityType: 'Sightseeing',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_8',
-          imageUrl: 'https://picsum.photos/id/1050/600/600',
-          capturedAt: DateTime(2026, 7, 18, 12, 10),
-          ownerUserId: '4',
-          ownerUsername: 'Pang',
-          ownerProfileImageUrl: null,
-          locationName: 'Nimman',
-          activityType: 'Food',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_9',
-          imageUrl: 'https://picsum.photos/id/1060/600/600',
-          capturedAt: DateTime(2026, 7, 18, 14, 45),
-          ownerUserId: '2',
-          ownerUsername: 'Sabrina',
-          ownerProfileImageUrl: null,
-          locationName: 'Nimman',
-          activityType: 'Transit',
-        ),
-
-        TripPhotoItem(
-          id: 'photo_10',
-          imageUrl: 'https://picsum.photos/id/1074/600/600',
-          capturedAt: DateTime(2026, 7, 18, 17, 20),
-          ownerUserId: '1',
-          ownerUsername: 'Jig',
-          ownerProfileImageUrl: null,
-          locationName: 'Chiang Mai Old City',
-          activityType: 'Sightseeing',
-        ),
-      ];
+          locationName: null,
+          activityType: null,
+        );
+      }).toList();
 
       photos.sort((a, b) => a.capturedAt.compareTo(b.capturedAt));
 
@@ -354,31 +248,12 @@ class PhotoSectionViewModel extends ChangeNotifier {
       _hasLoadedPhotos = true;
 
       debugPrint('TRIP PHOTOS LOAD SUCCESS');
-
       debugPrint('Total photos: ${photos.length}');
-
-      for (final group in photoGroups) {
-        debugPrint(
-          'PHOTO GROUP: '
-          '${group.photos.length} photos',
-        );
-      }
-
-      for (final photo in photos) {
-        debugPrint(
-          'PHOTO ${photo.id}: '
-          'owner=${photo.ownerUsername}, '
-          'time=${photo.capturedAt}, '
-          'location=${photo.locationName}',
-        );
-      }
     } on SocketException {
       _clearPhotos();
-
       errorMessage = 'Request failed. Please check your connection.';
     } catch (error, stackTrace) {
       debugPrint('LOAD TRIP PHOTOS ERROR: $error');
-
       debugPrintStack(stackTrace: stackTrace);
 
       _clearPhotos();

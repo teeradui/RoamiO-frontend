@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/models/services/overview_sevice.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
+import 'package:roamio_frontend/models/trip_summary_model.dart';
 
 class OverviewPlace {
   final String name;
@@ -42,11 +44,14 @@ class OverviewSectionViewModel extends ChangeNotifier {
     required this.tripId,
     required this.tripStatus,
     OverviewService? overviewService,
-  }) : _overviewService = overviewService ?? OverviewService();
+    TripSummaryService? tripSummaryService,
+  }) : _overviewService = overviewService ?? OverviewService(),
+       _tripSummaryService = tripSummaryService ?? TripSummaryService();
 
   final String tripId;
   final TripStatus tripStatus;
   final OverviewService _overviewService;
+  final TripSummaryService _tripSummaryService;
 
   int photosCount = 0;
   int placesCount = 0;
@@ -194,207 +199,170 @@ class OverviewSectionViewModel extends ChangeNotifier {
   }*/
 
   //mock data
-  void _loadMockCompletedData() {
-  photosCount = 18;
-  placesCount = 6;
-  activitiesCount = 14;
-
-  totalDistanceKm = 42.8;
-  totalDurationText = '2 days 8 hrs';
-
-  activityTypes = [
-    OverviewActivityType(
-      label: 'Food',
-      count: 4,
-      bgColor: _getActivityBackgroundColor('Food'),
-      textColor: _getActivityTextColor('Food'),
-    ),
-    OverviewActivityType(
-      label: 'Outdoor',
-      count: 3,
-      bgColor: _getActivityBackgroundColor('Outdoor'),
-      textColor: _getActivityTextColor('Outdoor'),
-    ),
-    OverviewActivityType(
-      label: 'Sightseeing',
-      count: 5,
-      bgColor: _getActivityBackgroundColor('Sightseeing'),
-      textColor: _getActivityTextColor('Sightseeing'),
-    ),
-    OverviewActivityType(
-      label: 'Transit',
-      count: 2,
-      bgColor: _getActivityBackgroundColor('Transit'),
-      textColor: _getActivityTextColor('Transit'),
-    ),
-  ];
-
-  places = const [
-    OverviewPlace(
-      name: 'Chiang Mai University',
-      type: 'University',
-      timeText: '09:30 AM',
-    ),
-    OverviewPlace(
-      name: 'One Nimman',
-      type: 'Shopping Area',
-      timeText: '12:45 PM',
-    ),
-    OverviewPlace(
-      name: 'Tha Phae Gate',
-      type: 'Landmark',
-      timeText: '04:10 PM',
-    ),
-  ];
-
-  // Trip Summary — ข้อมูลของทั้งกลุ่ม
-  groupActivityStats = const [
-    OverviewRadarItem(
-      label: 'Food',
-      value: 8,
-    ),
-    OverviewRadarItem(
-      label: 'Outdoor',
-      value: 7,
-    ),
-    OverviewRadarItem(
-      label: 'Sightseeing',
-      value: 9,
-    ),
-    OverviewRadarItem(
-      label: 'Transit',
-      value: 5,
-    ),
-    OverviewRadarItem(
-      label: 'Photo',
-      value: 6,
-    ),
-  ];
-
-  // My Activities Stat — ข้อมูลของ current user
-  myActivityStats = const [
-    OverviewRadarItem(
-      label: 'Food',
-      value: 5,
-    ),
-    OverviewRadarItem(
-      label: 'Outdoor',
-      value: 9,
-    ),
-    OverviewRadarItem(
-      label: 'Sightseeing',
-      value: 6,
-    ),
-    OverviewRadarItem(
-      label: 'Transit',
-      value: 4,
-    ),
-    OverviewRadarItem(
-      label: 'Photo',
-      value: 8,
-    ),
-  ];
-}
-
-Future<void> loadOverview() async {
-  errorMessage = null;
-
-  if (isUpcoming) {
-    _clearData();
+    Future<void> _loadCompletedFromBackend() async {
+    isLoading = true;
     notifyListeners();
-    return;
-  }
 
-  // TEMPORARY MOCK FOR COMPLETED
-  if (isCompleted) {
-    _clearData();
-    _loadMockCompletedData();
-    notifyListeners();
-    return;
-  }
+    try {
+      final results = await Future.wait([
+        _tripSummaryService.getSummary(tripId),
+        _tripSummaryService.getActivityGraphData(tripId),
+      ]);
 
-  // Active ใช้ backend ตามเดิม
-  if (!isActive) {
-    _clearData();
-    notifyListeners();
-    return;
-  }
+      final summary = results[0] as TripSummary;
+      final graphData = results[1] as ActivityGraphData;
 
-  isLoading = true;
-  notifyListeners();
+      photosCount = summary.photos.length;
+      activitiesCount = summary.activities.length;
 
-  try {
-    final response = await _overviewService.getTripOverview(
-      tripId,
-    );
+      final distinctLocations = summary.activities
+          .map((a) => a.locationName)
+          .where((name) => name != null && name.trim().isNotEmpty)
+          .toSet();
+      placesCount = distinctLocations.length;
 
-    photosCount = response.photosCount;
-    placesCount = response.placesCount;
-    activitiesCount = response.activitiesCount;
-
-    places = response.places
-        .map(
-          (place) => OverviewPlace(
-            name: place.name,
-            type: place.type,
-            timeText: _formatTime(
-              place.timeText,
+      places = summary.activities
+          .where((a) => a.locationName != null && a.locationName!.trim().isNotEmpty)
+          .map(
+            (a) => OverviewPlace(
+              name: a.locationName!,
+              type: a.locationType ?? 'WIP (need to implement)',
+              timeText: a.startTime != null
+                  ? _formatTime(a.startTime!.toIso8601String())
+                  : 'WIP (need to implement)',
             ),
-          ),
-        )
-        .toList();
+          )
+          .toList();
 
-    activityTypes = response.activityTypes
-        .map(
-          (activity) => OverviewActivityType(
-            label: activity.label,
-            count: activity.count,
-            bgColor:
-                _getActivityBackgroundColor(
-              activity.label,
+      // Group activity-type tally, derived client-side from all trip activities.
+      final groupTally = <String, int>{};
+      for (final activity in summary.activities) {
+        final type = activity.activityType?.trim();
+        if (type == null || type.isEmpty) continue;
+        groupTally[type] = (groupTally[type] ?? 0) + 1;
+      }
+
+      activityTypes = groupTally.entries
+          .map(
+            (entry) => OverviewActivityType(
+              label: entry.key,
+              count: entry.value,
+              bgColor: _getActivityBackgroundColor(entry.key),
+              textColor: _getActivityTextColor(entry.key),
             ),
-            textColor:
-                _getActivityTextColor(
-              activity.label,
-            ),
-          ),
-        )
-        .toList();
-  } on SocketException {
-    _clearData();
+          )
+          .toList();
 
-    errorMessage =
-        'Request failed. Please check your connection.';
-  } catch (error, stackTrace) {
-    debugPrint(
-      'LOAD OVERVIEW ERROR: $error',
-    );
+      groupActivityStats = groupTally.entries
+          .map((entry) => OverviewRadarItem(label: entry.key, value: entry.value.toDouble()))
+          .toList();
 
-    debugPrintStack(
-      stackTrace: stackTrace,
-    );
+      myActivityStats = graphData.activityTypeCounts
+          .map((item) => OverviewRadarItem(label: item.activityType, value: item.count.toDouble()))
+          .toList();
 
-    _clearData();
+      // WIP: no backend field yet for real trip distance/duration.
+      totalDistanceKm = 0;
+      totalDurationText = 'WIP (need to implement)';
+    } on SocketException {
+      _clearData();
+      errorMessage = 'Request failed. Please check your connection.';
+    } catch (error, stackTrace) {
+      debugPrint('LOAD OVERVIEW (COMPLETED) ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
 
-    final message =
-        error.toString().toLowerCase();
+      _clearData();
+      final message = error.toString().toLowerCase();
 
-    if (message.contains('socketexception') ||
-        message.contains('connection refused') ||
-        message.contains('network is unreachable') ||
-        message.contains('failed host lookup') ||
-        message.contains('timed out')) {
-      errorMessage =
-          'Request failed. Please check your connection.';
-    } else {
-      errorMessage =
-          'Unable to load trip summary. Please try again.';
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        errorMessage = 'Unable to load trip summary. Please try again.';
+      }
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-  } finally {
-    isLoading = false;
-    notifyListeners();
   }
-}
+
+  Future<void> loadOverview() async {
+    errorMessage = null;
+
+    if (isUpcoming) {
+      _clearData();
+      notifyListeners();
+      return;
+    }
+
+    if (isCompleted) {
+      await _loadCompletedFromBackend();
+      return;
+    }
+
+    if (!isActive) {
+      _clearData();
+      notifyListeners();
+      return;
+    }
+
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await _overviewService.getTripOverview(tripId);
+
+      photosCount = response.photosCount;
+      placesCount = response.placesCount;
+      activitiesCount = response.activitiesCount;
+
+      places = response.places
+          .map(
+            (place) => OverviewPlace(
+              name: place.name,
+              type: place.type,
+              timeText: _formatTime(place.timeText),
+            ),
+          )
+          .toList();
+
+      activityTypes = response.activityTypes
+          .map(
+            (activity) => OverviewActivityType(
+              label: activity.label,
+              count: activity.count,
+              bgColor: _getActivityBackgroundColor(activity.label),
+              textColor: _getActivityTextColor(activity.label),
+            ),
+          )
+          .toList();
+    } on SocketException {
+      _clearData();
+      errorMessage = 'Request failed. Please check your connection.';
+    } catch (error, stackTrace) {
+      debugPrint('LOAD OVERVIEW ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      _clearData();
+      final message = error.toString().toLowerCase();
+
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        errorMessage = 'Unable to load trip summary. Please try again.';
+      }
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
 //mock data 
   
