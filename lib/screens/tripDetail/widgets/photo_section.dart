@@ -5,15 +5,71 @@ import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/photo_section_view_model.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 
+class PhotoSectionController extends ChangeNotifier {
+  PhotoSectionViewModel? _viewModel;
+
+  void attach(PhotoSectionViewModel viewModel) {
+    if (identical(_viewModel, viewModel)) {
+      return;
+    }
+
+    _viewModel?.removeListener(_handleViewModelChanged);
+
+    _viewModel = viewModel;
+    _viewModel!.addListener(_handleViewModelChanged);
+
+    notifyListeners();
+  }
+
+  void detach(PhotoSectionViewModel viewModel) {
+    if (!identical(_viewModel, viewModel)) {
+      return;
+    }
+
+    _viewModel?.removeListener(_handleViewModelChanged);
+    _viewModel = null;
+
+    notifyListeners();
+  }
+
+  void _handleViewModelChanged() {
+    notifyListeners();
+  }
+
+  bool get isSelectionMode => _viewModel?.isSelectionMode ?? false;
+
+  PhotoSelectionAction? get selectionAction => _viewModel?.selectionAction;
+
+  bool get hasSelectedPhotos => _viewModel?.hasSelectedPhotos ?? false;
+
+  int get selectedPhotoCount => _viewModel?.selectedPhotoCount ?? 0;
+
+  void cancelSelection() {
+    _viewModel?.cancelSelection();
+  }
+
+  Future<bool> confirmSelection() async {
+    final viewModel = _viewModel;
+
+    if (viewModel == null) {
+      return false;
+    }
+
+    return viewModel.confirmSelection();
+  }
+}
+
 class PhotoSection extends StatefulWidget {
   const PhotoSection({
     super.key,
     required this.tripId,
     required this.tripStatus,
+    required this.controller,
   });
 
   final String tripId;
   final TripStatus tripStatus;
+  final PhotoSectionController controller;
 
   @override
   State<PhotoSection> createState() => _PhotoSectionState();
@@ -23,21 +79,57 @@ class _PhotoSectionState extends State<PhotoSection> {
   late final PhotoSectionViewModel viewModel;
 
   @override
-  void initState() {
-    super.initState();
+void initState() {
+  super.initState();
 
-    viewModel = PhotoSectionViewModel(
-      tripId: widget.tripId,
-      tripStatus: widget.tripStatus,
-    );
+  viewModel = PhotoSectionViewModel(
+    tripId: widget.tripId,
+    tripStatus: widget.tripStatus,
+  );
 
-    viewModel.initialize();
-  }
+  widget.controller.attach(viewModel);
+
+  viewModel.initialize();
+}
 
   @override
-  void dispose() {
-    viewModel.dispose();
-    super.dispose();
+void dispose() {
+  widget.controller.detach(viewModel);
+  viewModel.dispose();
+
+  super.dispose();
+}
+
+  Future<bool> _showDeleteConfirmation(BuildContext context, int count) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete photos?'),
+          content: Text(
+            'Are you sure you want to delete '
+            '$count selected photo${count > 1 ? 's' : ''}?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Cancel'),
+            ),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
   }
 
   @override
@@ -45,36 +137,81 @@ class _PhotoSectionState extends State<PhotoSection> {
     return AnimatedBuilder(
       animation: viewModel,
       builder: (context, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        return Stack(
+          clipBehavior: Clip.none,
           children: [
-            _SelectAlbumButton(
-              text: viewModel.selectAlbumText,
-              isLoading: viewModel.isSelectingAlbum,
-              enabled: viewModel.canSelectAlbum,
-              onTap: viewModel.canSelectAlbum && !viewModel.isSelectingAlbum
-                  ? viewModel.selectAlbum
-                  : null,
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: viewModel.isSelectionMode ? 82 : 0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!viewModel.isSelectionMode)
+                    _SelectAlbumButton(
+                      text: viewModel.selectAlbumText,
+                      isLoading: viewModel.isSelectingAlbum,
+                      enabled: viewModel.canSelectAlbum,
+                      onTap:
+                          viewModel.canSelectAlbum &&
+                              !viewModel.isSelectingAlbum
+                          ? viewModel.selectAlbum
+                          : null,
+                    ),
+
+                  if (viewModel.hasPhotos) ...[
+                    const SizedBox(height: 18),
+
+                    if (viewModel.isSelectionMode)
+                      _SelectionHeader(
+                        title: viewModel.selectionTitle,
+                        selectedCount: viewModel.selectedPhotoCount,
+                        isAllSelected: viewModel.areAllPhotosSelected,
+                        onSelectAll: viewModel.toggleSelectAll,
+                      )
+                    else
+                      _PhotoActionHeader(
+                        onSave: () {
+                          viewModel.enterSelectionMode(
+                            PhotoSelectionAction.save,
+                          );
+                        },
+                        onDelete: () {
+                          viewModel.enterSelectionMode(
+                            PhotoSelectionAction.delete,
+                          );
+                        },
+                      ),
+                  ],
+
+                  const SizedBox(height: 22),
+
+                  if (viewModel.isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.btnPrimary,
+                        ),
+                      ),
+                    )
+                  else if (viewModel.errorMessage != null)
+                    _PhotoErrorState(
+                      message: viewModel.errorMessage!,
+                      onRetry: viewModel.retry,
+                    )
+                  else if (!viewModel.hasPhotos)
+                    const _NoPhotosState()
+                  else
+                    _PhotoGroups(
+                      groups: viewModel.photoGroups,
+                      isSelectionMode: viewModel.isSelectionMode,
+                      isPhotoSelected: viewModel.isPhotoSelected,
+                      onPhotoTap: viewModel.togglePhotoSelection,
+                    ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 22),
-
-            if (viewModel.isLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.btnPrimary),
-                ),
-              )
-            else if (viewModel.errorMessage != null)
-              _PhotoErrorState(
-                message: viewModel.errorMessage!,
-                onRetry: viewModel.retry,
-              )
-            else if (!viewModel.hasPhotos)
-              const _NoPhotosState()
-            else
-              _PhotoGroups(groups: viewModel.photoGroups),
           ],
         );
       },
@@ -176,10 +313,152 @@ class _SelectAlbumButton extends StatelessWidget {
   }
 }
 
+class _PhotoActionHeader extends StatelessWidget {
+  const _PhotoActionHeader({required this.onSave, required this.onDelete});
+
+  final VoidCallback onSave;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Trip Photos',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+
+        PopupMenuButton<String>(
+          icon: const Icon(
+            Icons.more_horiz_rounded,
+            color: AppColors.textPrimary,
+          ),
+          color: AppColors.bgCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          onSelected: (value) {
+            if (value == 'save') {
+              onSave();
+            } else if (value == 'delete') {
+              onDelete();
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'save',
+              child: Row(
+                children: [
+                  Icon(Icons.download_rounded, color: AppColors.textPrimary),
+                  SizedBox(width: 10),
+                  Text('Save'),
+                ],
+              ),
+            ),
+
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline_rounded, color: Colors.red),
+                  SizedBox(width: 10),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SelectionHeader extends StatelessWidget {
+  const _SelectionHeader({
+    required this.title,
+    required this.selectedCount,
+    required this.isAllSelected,
+    required this.onSelectAll,
+  });
+
+  final String title;
+  final int selectedCount;
+  final bool isAllSelected;
+  final VoidCallback onSelectAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+
+              const SizedBox(height: 2),
+
+              Text(
+                '$selectedCount selected',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        TextButton.icon(
+          onPressed: onSelectAll,
+          icon: Icon(
+            isAllSelected
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
+            color: AppColors.btnPrimary,
+            size: 19,
+          ),
+          label: Text(
+            isAllSelected ? 'Deselect All' : 'Select All',
+            style: const TextStyle(
+              color: AppColors.btnPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PhotoGroups extends StatelessWidget {
-  const _PhotoGroups({required this.groups});
+  const _PhotoGroups({
+    required this.groups,
+    required this.isSelectionMode,
+    required this.isPhotoSelected,
+    required this.onPhotoTap,
+  });
 
   final List<TripPhotoGroup> groups;
+
+  final bool isSelectionMode;
+
+  final bool Function(String photoId) isPhotoSelected;
+
+  final void Function(String photoId) onPhotoTap;
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +482,8 @@ class _PhotoGroups extends StatelessWidget {
                   Expanded(
                     child: Text(
                       group.showDate
-                          ? '${group.dateText} · ${group.locationName}'
+                          ? '${group.dateText} · '
+                                '${group.locationName}'
                           : group.locationName,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
@@ -238,7 +518,14 @@ class _PhotoGroups extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final photo = group.photos[index];
 
-                  return _PhotoTile(photo: photo);
+                  return _PhotoTile(
+                    photo: photo,
+                    isSelectionMode: isSelectionMode,
+                    isSelected: isPhotoSelected(photo.id),
+                    onTap: () {
+                      onPhotoTap(photo.id);
+                    },
+                  );
                 },
               ),
             ],
@@ -250,67 +537,114 @@ class _PhotoGroups extends StatelessWidget {
 }
 
 class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({required this.photo});
+  const _PhotoTile({
+    required this.photo,
+    required this.isSelectionMode,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   final TripPhotoItem photo;
 
+  final bool isSelectionMode;
+  final bool isSelected;
+
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.network(
-            photo.imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: AppColors.bgAccent,
-                child: const Icon(
-                  Icons.broken_image_outlined,
-                  color: AppColors.textDisabled,
-                ),
-              );
-            },
-          ),
+    return GestureDetector(
+      onTap: isSelectionMode ? onTap : null,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              photo.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: AppColors.bgAccent,
+                  child: const Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.textDisabled,
+                  ),
+                );
+              },
+            ),
 
-          if (photo.activityType != null)
-            Positioned(
-              right: 6,
-              bottom: 6,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: CircleAvatar(
-                  radius: 11,
-                  backgroundColor: AppColors.bgAccent,
-                  backgroundImage:
-                      photo.ownerProfileImageUrl != null &&
-                          photo.ownerProfileImageUrl!.trim().isNotEmpty
-                      ? NetworkImage(photo.ownerProfileImageUrl!)
-                      : null,
-                  child:
-                      photo.ownerProfileImageUrl == null ||
-                          photo.ownerProfileImageUrl!.trim().isEmpty
+            // รูปถูกเลือก
+            if (isSelectionMode && isSelected)
+              Container(color: Colors.black.withValues(alpha: 0.25)),
+
+            // checkbox
+            if (isSelectionMode)
+              Positioned(
+                top: 7,
+                right: 7,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.btnPrimary
+                        : Colors.white.withValues(alpha: 0.85),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.btnPrimary
+                          : AppColors.textDisabled,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: isSelected
                       ? const Icon(
-                          Icons.person_rounded,
-                          size: 13,
-                          color: AppColors.textSecondary,
+                          Icons.check_rounded,
+                          size: 17,
+                          color: Colors.white,
                         )
                       : null,
                 ),
               ),
-            ),
-        ],
+
+            // Owner profile
+            if (photo.activityType != null && !isSelectionMode)
+              Positioned(
+                right: 6,
+                bottom: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: CircleAvatar(
+                    radius: 11,
+                    backgroundColor: AppColors.bgAccent,
+                    backgroundImage:
+                        photo.ownerProfileImageUrl != null &&
+                            photo.ownerProfileImageUrl!.trim().isNotEmpty
+                        ? NetworkImage(photo.ownerProfileImageUrl!)
+                        : null,
+                    child:
+                        photo.ownerProfileImageUrl == null ||
+                            photo.ownerProfileImageUrl!.trim().isEmpty
+                        ? const Icon(
+                            Icons.person_rounded,
+                            size: 13,
+                            color: AppColors.textSecondary,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
-
 
 class _NoPhotosState extends StatelessWidget {
   const _NoPhotosState();
@@ -360,7 +694,6 @@ class _NoPhotosState extends StatelessWidget {
     );
   }
 }
-
 
 class _PhotoErrorState extends StatelessWidget {
   const _PhotoErrorState({required this.message, required this.onRetry});
