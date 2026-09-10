@@ -74,5 +74,44 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>FacebookAppID</key>
+	<string>2473226279867353</string>
+
+	<key>FacebookClientToken</key>
+	<string>4c44fb79c0589885e2a86eb1b938e9f1</string>
+
+	<key>FacebookDisplayName</key>
+	<string>RoamiO</string>
+
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<false/>
+
+	<key>FacebookAdvertiserIDCollectionEnabled</key>
+	<false/>
+
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb2473226279867353</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram</string>
+		<string>instagram-stories</string>
+		<string>fb</string>
+		<string>facebook-stories</string>
+		<string>fbauth2</string>
+		<string>fbapi</string>
+		<string>fbshareextension</string>
+	</array>
+
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save media so it can be shared to Instagram.</string>
+
 </dict>
 </plist>

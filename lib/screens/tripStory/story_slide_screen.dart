@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_social_share_plus/flutter_social_share_plus.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/story_slide_view_model.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_cover_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_trip_overview_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_activity_summary_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_my_activity_stats_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_trip_awards_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_reliability_scores_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_trip_roadmap_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_ending_slide.dart';
-import 'package:roamio_frontend/screens/tripStory/widgets/story_photo_highlights_slide.dart';
+import 'package:roamio_frontend/screens/tripStory/story_share_recording_screen.dart';
+import 'package:roamio_frontend/screens/tripStory/story_share_slide_selector.dart';
+import 'package:roamio_frontend/screens/tripStory/widgets/story_slide_body.dart';
+
+enum StorySharePlatform { instagram, facebook }
 
 class StorySlideScreen extends StatefulWidget {
   const StorySlideScreen({super.key, required this.tripId});
@@ -52,15 +48,19 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
     if (viewModel.errorMessage != null) {
       message = viewModel.errorMessage;
     } else if (viewModel.isEmpty) {
-      message = "No story available for this trip.";
+      message = 'No story available for this trip.';
     }
 
-    if (message == null) return;
+    if (message == null) {
+      return;
+    }
 
     _isAlertShowing = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       await _showStoryAlert(message!);
 
@@ -68,8 +68,274 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
     });
   }
 
+  Future<void> _handleShareStory() async {
+    final selectedSlide = await Navigator.push<StorySlideItem>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoryShareSlideSelector(slides: viewModel.slides),
+      ),
+    );
+
+    if (!mounted || selectedSlide == null) {
+      return;
+    }
+
+    debugPrint('SELECTED STORY SLIDE: ${selectedSlide.type}');
+
+    final selectedPlatform = await showModalBottomSheet<StorySharePlatform>(
+      context: context,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.textDisabled,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                const Text(
+                  'Share your trip story',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                const Text(
+                  'Choose where you want to share it',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                _SharePlatformTile(
+                  icon: Icons.camera_alt_rounded,
+                  label: 'Instagram',
+                  onTap: () {
+                    Navigator.pop(sheetContext, StorySharePlatform.instagram);
+                  },
+                ),
+
+                const SizedBox(height: 10),
+
+                _SharePlatformTile(
+                  icon: Icons.facebook_rounded,
+                  label: 'Facebook',
+                  onTap: () {
+                    Navigator.pop(sheetContext, StorySharePlatform.facebook);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted || selectedPlatform == null) {
+      return;
+    }
+
+    debugPrint('SELECTED PLATFORM: $selectedPlatform');
+
+    debugPrint('SLIDE TO SHARE: ${selectedSlide.type}');
+
+    final videoPath = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StoryShareRecordingScreen(
+          tripId: viewModel.tripId,
+          slide: selectedSlide,
+        ),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (videoPath == null || videoPath.isEmpty) {
+      await _showShareError('Unable to generate trip story. Please try again.');
+
+      return;
+    }
+
+    debugPrint('STORY VIDEO READY: $videoPath');
+
+    debugPrint('SHARE TO: $selectedPlatform');
+
+    debugPrint('STORY VIDEO READY: $videoPath');
+
+    debugPrint('SHARE TO: $selectedPlatform');
+
+    await _shareStoryVideo(videoPath: videoPath, platform: selectedPlatform);
+  }
+
+  Future<void> _shareStoryVideo({
+    required String videoPath,
+    required StorySharePlatform platform,
+  }) async {
+    try {
+      late final ShareTarget target;
+
+      switch (platform) {
+        case StorySharePlatform.instagram:
+          target = ShareTarget.instagramStory;
+          break;
+
+        case StorySharePlatform.facebook:
+          target = ShareTarget.facebookStory;
+          break;
+      }
+
+      final isAvailable = await SocialSharePlus.isAvailable(target);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!isAvailable) {
+        await _showShareError(
+          'Unable to open the selected application. Please try again.',
+        );
+
+        return;
+      }
+
+      late final ShareResult result;
+
+      switch (platform) {
+        case StorySharePlatform.instagram:
+          result = await SocialSharePlus.instagramStory(
+            config: StoryConfig(
+              appId: 'YOUR_FACEBOOK_APP_ID',
+              backgroundVideoPath: videoPath,
+            ),
+          );
+          break;
+
+        case StorySharePlatform.facebook:
+          result = await SocialSharePlus.facebookStory(
+            config: StoryConfig(
+              appId: 'YOUR_FACEBOOK_APP_ID',
+              backgroundVideoPath: videoPath,
+            ),
+          );
+          break;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      switch (result) {
+        case ShareLaunched():
+          debugPrint('SHARE APP OPENED');
+          break;
+
+        case ShareCompleted():
+          debugPrint('SHARE COMPLETED');
+          break;
+
+        case ShareCancelled():
+          debugPrint('SHARE CANCELLED');
+          break;
+
+        case ShareUnavailable():
+          await _showShareError(
+            'Unable to open the selected application. Please try again.',
+          );
+          break;
+
+        case ShareFailed(:final code, :final message):
+          debugPrint('SHARE FAILED: $code $message');
+
+          await _showShareError(
+            'Unable to open the selected application. Please try again.',
+          );
+          break;
+      }
+    } catch (error) {
+      debugPrint('SHARE STORY ERROR: $error');
+
+      if (!mounted) {
+        return;
+      }
+
+      await _showShareError(
+        'Unable to open the selected application. Please try again.',
+      );
+    }
+  }
+
+  Future<void> _showShareError(String message) async {
+    if (!mounted) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.bgCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Trip Story',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.btnPrimary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _showStoryAlert(String message) async {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     await showDialog<void>(
       context: context,
@@ -85,7 +351,7 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
               Icon(Icons.info_outline_rounded, color: AppColors.btnPrimary),
               SizedBox(width: 10),
               Text(
-                "Trip Story",
+                'Trip Story',
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
@@ -115,7 +381,7 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
                 ),
               ),
               child: const Text(
-                "OK",
+                'OK',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -123,6 +389,7 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
         );
       },
     );
+
     if (mounted) {
       Navigator.pop(context);
     }
@@ -159,6 +426,7 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
             onClose: () {
               Navigator.of(context).pop();
             },
+            onShare: _handleShareStory,
           );
         },
       ),
@@ -167,11 +435,15 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
 }
 
 class _StoryContent extends StatelessWidget {
-  const _StoryContent({required this.viewModel, required this.onClose});
+  const _StoryContent({
+    required this.viewModel,
+    required this.onClose,
+    required this.onShare,
+  });
 
   final StorySlideViewModel viewModel;
-
   final VoidCallback onClose;
+  final Future<void> Function() onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -184,10 +456,11 @@ class _StoryContent extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(
-          child: _StorySlideBody(
+          child: StorySlideBody(
             slide: slide,
             tripId: viewModel.tripId,
             onDone: onClose,
+            onShare: onShare,
           ),
         ),
 
@@ -202,7 +475,6 @@ class _StoryContent extends StatelessWidget {
               onTap: viewModel.previousSlide,
             ),
           ),
-
           Positioned(
             right: 0,
             top: 70,
@@ -214,7 +486,6 @@ class _StoryContent extends StatelessWidget {
             ),
           ),
         ] else if (slide.type == StorySlideType.ending) ...[
-         
           Positioned(
             left: 0,
             top: 70,
@@ -235,7 +506,6 @@ class _StoryContent extends StatelessWidget {
                     onTap: viewModel.previousSlide,
                   ),
                 ),
-
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
@@ -246,7 +516,6 @@ class _StoryContent extends StatelessWidget {
             ),
           ),
 
-        
         SafeArea(
           child: Stack(
             children: [
@@ -273,7 +542,6 @@ class _StoryContent extends StatelessWidget {
                   }),
                 ),
               ),
-
               Positioned(
                 top: 26,
                 right: 14,
@@ -286,211 +554,6 @@ class _StoryContent extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StorySlideBody extends StatelessWidget {
-  const _StorySlideBody({
-    required this.slide,
-    required this.tripId,
-    required this.onDone,
-  });
-
-  final StorySlideItem slide;
-  final String tripId;
-  final VoidCallback onDone;
-
-  @override
-  Widget build(BuildContext context) {
-    if (slide.type == StorySlideType.cover) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.cover),
-
-          StoryCoverSlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.tripOverview) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.tripOverview),
-
-          StoryTripOverviewSlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.activitySummary) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.activitySummary),
-
-          StoryActivitySummarySlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.photoHighlights) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.photoHighlights),
-
-          StoryPhotoHighlightsSlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.myActivityStats) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.myActivityStats),
-
-          StoryMyActivityStatsSlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.tripAwards) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.tripAwards),
-
-          StoryTripAwardsSlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.reliabilityScores) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.reliabilityScores),
-
-          StoryReliabilityScoresSlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.tripRoadmap) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.tripRoadmap),
-
-          StoryTripRoadmapSlide(tripId: tripId),
-        ],
-      );
-    }
-
-    if (slide.type == StorySlideType.ending) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          _StoryBackground(type: StorySlideType.ending),
-
-          StoryEndingSlide(tripId: tripId, onDone: onDone),
-        ],
-      );
-    }
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        _StoryBackground(type: slide.type),
-
-        Padding(
-          padding: const EdgeInsets.fromLTRB(28, 80, 28, 50),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (slide.imageUrl != null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: Image.network(
-                    slide.imageUrl!,
-                    width: double.infinity,
-                    height: 330,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
-                const SizedBox(height: 26),
-              ],
-
-              if (slide.title != null)
-                Text(
-                  slide.title!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-              if (slide.subtitle != null) ...[
-                const SizedBox(height: 10),
-
-                Text(
-                  slide.subtitle!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-
-              if (slide.description != null) ...[
-                const SizedBox(height: 14),
-
-                Text(
-                  slide.description!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-
-              if (slide.statValue != null) ...[
-                const SizedBox(height: 24),
-
-                Text(
-                  slide.statValue!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 46,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                if (slide.statLabel != null)
-                  Text(
-                    slide.statLabel!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              ],
             ],
           ),
         ),
@@ -515,11 +578,9 @@ class _StoryEmptyState extends StatelessWidget {
                 color: AppColors.textDisabled,
                 size: 48,
               ),
-
               const SizedBox(height: 14),
-
               const Text(
-                "No story available for this trip.",
+                'No story available for this trip.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -530,7 +591,6 @@ class _StoryEmptyState extends StatelessWidget {
             ],
           ),
         ),
-
         Positioned(
           top: 10,
           left: 6,
@@ -553,7 +613,6 @@ class _StoryErrorState extends StatelessWidget {
   const _StoryErrorState({required this.message, required this.onRetry});
 
   final String message;
-
   final Future<void> Function() onRetry;
 
   @override
@@ -571,9 +630,7 @@ class _StoryErrorState extends StatelessWidget {
                   color: AppColors.btnPrimary,
                   size: 46,
                 ),
-
                 const SizedBox(height: 14),
-
                 Text(
                   message,
                   textAlign: TextAlign.center,
@@ -583,15 +640,13 @@ class _StoryErrorState extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
                 ElevatedButton.icon(
                   onPressed: () {
                     onRetry();
                   },
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text("Try Again"),
+                  label: const Text('Try Again'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.btnPrimary,
                     foregroundColor: Colors.white,
@@ -601,7 +656,6 @@ class _StoryErrorState extends StatelessWidget {
             ),
           ),
         ),
-
         Positioned(
           top: 10,
           left: 6,
@@ -620,46 +674,61 @@ class _StoryErrorState extends StatelessWidget {
   }
 }
 
-String _getStoryBackgroundAsset(StorySlideType type) {
-  switch (type) {
-    case StorySlideType.cover:
-      return 'assets/storyBg/14.png';
+class _SharePlatformTile extends StatelessWidget {
+  const _SharePlatformTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
-    case StorySlideType.tripOverview:
-      return 'assets/storyBg/15.png';
-
-    case StorySlideType.activitySummary:
-      return 'assets/storyBg/5.png';
-
-    case StorySlideType.photoHighlights:
-      return 'assets/storyBg/21.png';
-
-    case StorySlideType.myActivityStats:
-      return 'assets/storyBg/19.png';
-
-    case StorySlideType.tripAwards:
-      return 'assets/storyBg/3.png';
-
-    case StorySlideType.reliabilityScores:
-      return 'assets/storyBg/17.png';
-
-    case StorySlideType.tripRoadmap:
-      return 'assets/storyBg/4.png';
-
-    case StorySlideType.ending:
-      return 'assets/storyBg/1.png';
-  }
-}
-
-class _StoryBackground extends StatelessWidget {
-  const _StoryBackground({required this.type});
-
-  final StorySlideType type;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final background = _getStoryBackgroundAsset(type);
+    return Material(
+      color: AppColors.bgAccent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: AppColors.bgCard,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.btnPrimary, size: 22),
+              ),
 
-    return Positioned.fill(child: Image.asset(background, fit: BoxFit.cover));
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 15,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
