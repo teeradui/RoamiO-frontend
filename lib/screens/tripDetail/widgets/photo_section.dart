@@ -79,26 +79,26 @@ class _PhotoSectionState extends State<PhotoSection> {
   late final PhotoSectionViewModel viewModel;
 
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
 
-  viewModel = PhotoSectionViewModel(
-    tripId: widget.tripId,
-    tripStatus: widget.tripStatus,
-  );
+    viewModel = PhotoSectionViewModel(
+      tripId: widget.tripId,
+      tripStatus: widget.tripStatus,
+    );
 
-  widget.controller.attach(viewModel);
+    widget.controller.attach(viewModel);
 
-  viewModel.initialize();
-}
+    viewModel.initialize();
+  }
 
   @override
-void dispose() {
-  widget.controller.detach(viewModel);
-  viewModel.dispose();
+  void dispose() {
+    widget.controller.detach(viewModel);
+    viewModel.dispose();
 
-  super.dispose();
-}
+    super.dispose();
+  }
 
   Future<bool> _showDeleteConfirmation(BuildContext context, int count) async {
     final result = await showDialog<bool>(
@@ -147,11 +147,14 @@ void dispose() {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!viewModel.isSelectionMode)
+                  if (!viewModel.isSelectionMode &&
+                      (!viewModel.isCompleted || viewModel.hasSelectedAlbum))
                     _SelectAlbumButton(
-                      text: viewModel.selectAlbumText,
+                      title: viewModel.albumTitleText,
+                      subtitle: viewModel.albumSubtitleText,
                       isLoading: viewModel.isSelectingAlbum,
                       enabled: viewModel.canSelectAlbum,
+                      hasSelectedAlbum: viewModel.hasSelectedAlbum,
                       onTap:
                           viewModel.canSelectAlbum &&
                               !viewModel.isSelectingAlbum
@@ -221,16 +224,20 @@ void dispose() {
 
 class _SelectAlbumButton extends StatelessWidget {
   const _SelectAlbumButton({
-    required this.text,
+    required this.title,
+    required this.subtitle,
     required this.onTap,
     required this.isLoading,
     required this.enabled,
+    required this.hasSelectedAlbum,
   });
 
-  final String text;
+  final String title;
+  final String subtitle;
   final VoidCallback? onTap;
   final bool isLoading;
   final bool enabled;
+  final bool hasSelectedAlbum;
 
   @override
   Widget build(BuildContext context) {
@@ -269,10 +276,14 @@ class _SelectAlbumButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Select Photo Album',
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: hasSelectedAlbum
+                            ? AppColors.textPrimary
+                            : AppColors.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                       ),
@@ -281,11 +292,13 @@ class _SelectAlbumButton extends StatelessWidget {
                     const SizedBox(height: 2),
 
                     Text(
-                      text,
+                      subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textDisabled,
+                      style: TextStyle(
+                        color: hasSelectedAlbum && enabled
+                            ? AppColors.btnPrimary
+                            : AppColors.textDisabled,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -303,7 +316,7 @@ class _SelectAlbumButton extends StatelessWidget {
                     color: AppColors.btnPrimary,
                   ),
                 )
-              else
+              else if (enabled)
                 const Icon(Icons.chevron_right, color: AppColors.textPrimary),
             ],
           ),

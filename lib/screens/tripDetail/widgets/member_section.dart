@@ -3,11 +3,17 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/member_section_view_model.dart';
 import 'package:roamio_frontend/screens/tripDetail/widgets/invite_member_sheet.dart';
+import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 
 class MemberSection extends StatefulWidget {
-  const MemberSection({super.key, required this.tripId});
+  const MemberSection({
+    super.key,
+    required this.tripId,
+    required this.tripStatus,
+  });
 
   final String tripId;
+  final TripStatus tripStatus;
 
   @override
   State<MemberSection> createState() => _MemberSectionState();
@@ -17,6 +23,10 @@ class _MemberSectionState extends State<MemberSection> {
   late final MemberSectionViewModel viewModel = MemberSectionViewModel(
     tripId: widget.tripId,
   );
+
+  bool get isCompleted => widget.tripStatus == TripStatus.completed;
+
+  bool get isActive => widget.tripStatus == TripStatus.active;
 
   @override
   void initState() {
@@ -126,7 +136,7 @@ class _MemberSectionState extends State<MemberSection> {
                     ),
                   ),
 
-                  if (viewModel.isCurrentUserOwner)
+                  if (viewModel.isCurrentUserOwner && !isCompleted && !isActive)
                     InkWell(
                       onTap: _handleAddMember,
                       borderRadius: BorderRadius.circular(99),
@@ -175,7 +185,11 @@ class _MemberSectionState extends State<MemberSection> {
 
                   return _MemberTile(
                     member: member,
-                    canRemove: viewModel.isCurrentUserOwner && !member.isOwner,
+                    canRemove:
+                        viewModel.isCurrentUserOwner &&
+                        !member.isOwner &&
+                        !isCompleted &&
+                        !isActive,
                     onRemove: () {
                       viewModel.removeMember(member.id);
                     },

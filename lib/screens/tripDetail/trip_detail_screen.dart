@@ -105,7 +105,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           controller: photoSectionController,
         );
       case TripDetailSection.member:
-        return MemberSection(tripId: widget.tripId);
+        return MemberSection(
+          tripId: widget.tripId,
+          tripStatus: viewModel.status,
+        );
     }
   }
 
@@ -549,34 +552,39 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                         color: AppColors.textPrimary,
                                       ),
                                     ),
-                                    IconButton(
-                                      onPressed: () async {
-                                        final updated =
-                                            await Navigator.push<bool>(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => EditTripScreen(
-                                                  tripId: viewModel.tripId,
+                                    if (!viewModel.isCompleted &&
+                                        !viewModel.isActive) ...[
+                                      IconButton(
+                                        onPressed: () async {
+                                          final updated =
+                                              await Navigator.push<bool>(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      EditTripScreen(
+                                                        tripId:
+                                                            viewModel.tripId,
+                                                      ),
                                                 ),
-                                              ),
+                                              );
+
+                                          if (!mounted) return;
+
+                                          if (updated == true) {
+                                            _tripChanged = true;
+
+                                            await viewModel.loadTrip(
+                                              forceRefresh: true,
                                             );
-
-                                        if (!mounted) return;
-
-                                        if (updated == true) {
-                                          _tripChanged = true;
-
-                                          await viewModel.loadTrip(
-                                            forceRefresh: true,
-                                          );
-                                        }
-                                      },
-                                      icon: const HugeIcon(
-                                        icon:
-                                            HugeIcons.strokeRoundedPencilEdit01,
-                                        color: AppColors.iconOrange,
+                                          }
+                                        },
+                                        icon: const HugeIcon(
+                                          icon: HugeIcons
+                                              .strokeRoundedPencilEdit01,
+                                          color: AppColors.iconOrange,
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ),
 
