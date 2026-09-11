@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 
 class StoryTripOverviewStat {
   final String label;
@@ -15,9 +16,11 @@ class StoryTripOverviewStat {
 class StoryTripOverviewViewModel extends ChangeNotifier {
   StoryTripOverviewViewModel({
     required this.tripId,
-  });
+    TripSummaryService? tripSummaryService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService();
 
   final String tripId;
+  final TripSummaryService _tripSummaryService;
 
   bool isLoading = false;
   String? errorMessage;
@@ -33,60 +36,65 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TEMPORARY MOCK DATA
-      // TODO: เปลี่ยนเป็นข้อมูลจาก backend ภายหลัง
-      stats = const [
-        StoryTripOverviewStat(
+      final summary = await _tripSummaryService.getSummary(tripId);
+
+      final distinctLocations = summary.activities
+          .map((a) => a.locationName)
+          .where((name) => name != null && name.trim().isNotEmpty)
+          .toSet();
+
+      // WIP (need to implement): no trip date range or distance calc
+      // exists server-side yet.
+      stats = [
+        const StoryTripOverviewStat(
           label: 'Days',
-          value: '3',
+          value: 'WIP (need to implement)',
           icon: Icons.calendar_month_rounded,
         ),
         StoryTripOverviewStat(
           label: 'Places',
-          value: '8',
+          value: '${distinctLocations.length}',
           icon: Icons.location_on_rounded,
         ),
-        StoryTripOverviewStat(
+        const StoryTripOverviewStat(
           label: 'Distance',
-          value: '42.8 km',
+          value: 'WIP (need to implement)',
           icon: Icons.route_rounded,
         ),
         StoryTripOverviewStat(
           label: 'Photos',
-          value: '24',
+          value: '${summary.photos.length}',
           icon: Icons.photo_camera_rounded,
         ),
       ];
 
-      debugPrint('TRIP OVERVIEW MOCK LOAD SUCCESS');
+      debugPrint('TRIP OVERVIEW LOAD SUCCESS');
 
       for (final stat in stats) {
-        debugPrint(
-          '${stat.label}: ${stat.value}',
-        );
+        debugPrint('${stat.label}: ${stat.value}');
       }
     } catch (error, stackTrace) {
-      debugPrint(
-        'LOAD STORY TRIP OVERVIEW ERROR: $error',
-      );
+      debugPrint('LOAD STORY TRIP OVERVIEW ERROR: $error');
 
-      debugPrintStack(
-        stackTrace: stackTrace,
-      );
+      debugPrintStack(stackTrace: stackTrace);
 
       stats = [];
 
-      errorMessage =
-          'Unable to load trip overview.';
+      final message = error.toString().toLowerCase();
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        errorMessage = 'Unable to load trip overview.';
+      }
     } finally {
       isLoading = false;
 
-      debugPrint(
-        'Trip overview stat count: ${stats.length}',
-      );
-      debugPrint(
-        '==============================================',
-      );
+      debugPrint('Trip overview stat count: ${stats.length}');
+      debugPrint('==============================================');
 
       notifyListeners();
     }

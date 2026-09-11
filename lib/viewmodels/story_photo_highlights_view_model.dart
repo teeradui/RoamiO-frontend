@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 
 class StoryHighlightPhoto {
   const StoryHighlightPhoto({
@@ -35,9 +36,13 @@ class StoryHighlightLocation {
 }
 
 class StoryPhotoHighlightsViewModel extends ChangeNotifier {
-  StoryPhotoHighlightsViewModel({required this.tripId});
+  StoryPhotoHighlightsViewModel({
+    required this.tripId,
+    TripSummaryService? tripSummaryService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService();
 
   final String tripId;
+  final TripSummaryService _tripSummaryService;
 
   static final Map<String, Map<int, String>> _subtitleCache = {};
 
@@ -50,6 +55,8 @@ class StoryPhotoHighlightsViewModel extends ChangeNotifier {
   int get totalPhotos => photos.length;
 
   bool get hasHighlights => topLocations.isNotEmpty;
+
+  bool isLocationRankingWip = false;
 
   List<StoryHighlightPhoto> _getHighlightPhotos({
     required int rank,
@@ -140,24 +147,28 @@ class StoryPhotoHighlightsViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    try {
-      /*
-       * TEMP MOCK
-       *
-       * TODO:
-       * ภายหลังข้อมูลชุดนี้ต้องมาจาก source เดียวกับ Photo Section
-       *
-       * เช่น:
-       * final photos =
-       *   await _tripPhotoService.getTripPhotos(tripId);
-       */
+        try {
+      final fetchedPhotos = await _tripSummaryService.getPhotos(tripId);
 
-      _loadMockPhotos();
+      // WIP (need to implement): backend does not yet return a location
+      // for each photo (no join to activities/stops). All photos are
+      // grouped under one placeholder location until that exists.
+      photos = fetchedPhotos
+          .map(
+            (photo) => StoryHighlightPhoto(
+              id: photo.photoId,
+              imageUrl: photo.photoUrl,
+              locationName: 'WIP (need to implement)',
+              capturedAt: photo.uploadedAt ?? DateTime.now(),
+              ownerUsername: photo.userId ?? 'WIP (need to implement)',
+            ),
+          )
+          .toList();
 
       _buildTopLocations();
+      isLocationRankingWip = true;
 
-      debugPrint('PHOTO HIGHLIGHTS LOAD SUCCESS');
-
+      debugPrint('PHOTO HIGHLIGHTS LOAD SUCCESS (location ranking WIP)');
       debugPrint('Total photos: $totalPhotos');
 
       for (final location in topLocations) {
@@ -175,8 +186,19 @@ class StoryPhotoHighlightsViewModel extends ChangeNotifier {
 
       photos = [];
       topLocations = [];
+      isLocationRankingWip = false;
 
-      errorMessage = 'Unable to load photo highlights.';
+      final message = error.toString().toLowerCase();
+
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        errorMessage = 'Unable to load photo highlights.';
+      }
     } finally {
       isLoading = false;
 
@@ -186,132 +208,132 @@ class StoryPhotoHighlightsViewModel extends ChangeNotifier {
     }
   }
 
-  void _loadMockPhotos() {
-    photos = [
-      StoryHighlightPhoto(
-        id: 'photo_1',
-        imageUrl: 'https://picsum.photos/id/1015/900/1200',
-        locationName: 'Chiang Mai University',
-        capturedAt: DateTime(2026, 7, 17, 8, 30),
-        ownerUsername: 'Jig',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_2',
-        imageUrl: 'https://picsum.photos/id/1016/900/1200',
-        locationName: 'Chiang Mai University',
-        capturedAt: DateTime(2026, 7, 17, 8, 45),
-        ownerUsername: 'Sabrina',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_3',
-        imageUrl: 'https://picsum.photos/id/1020/900/1200',
-        locationName: 'Chiang Mai University',
-        capturedAt: DateTime(2026, 7, 17, 9, 10),
-        ownerUsername: 'Cherry',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_4',
-        imageUrl: 'https://picsum.photos/id/1024/900/1200',
-        locationName: 'Chiang Mai University',
-        capturedAt: DateTime(2026, 7, 17, 9, 20),
-        ownerUsername: 'Pang',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_5',
-        imageUrl: 'https://picsum.photos/id/1031/900/1200',
-        locationName: 'Chiang Mai University',
-        capturedAt: DateTime(2026, 7, 17, 9, 35),
-        ownerUsername: 'Jig',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_6',
-        imageUrl: 'https://picsum.photos/id/1033/900/1200',
-        locationName: 'Chiang Mai University',
-        capturedAt: DateTime(2026, 7, 17, 9, 50),
-        ownerUsername: 'Sabrina',
-      ),
+  // void _loadMockPhotos() {
+  //   photos = [
+  //     StoryHighlightPhoto(
+  //       id: 'photo_1',
+  //       imageUrl: 'https://picsum.photos/id/1015/900/1200',
+  //       locationName: 'Chiang Mai University',
+  //       capturedAt: DateTime(2026, 7, 17, 8, 30),
+  //       ownerUsername: 'Jig',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_2',
+  //       imageUrl: 'https://picsum.photos/id/1016/900/1200',
+  //       locationName: 'Chiang Mai University',
+  //       capturedAt: DateTime(2026, 7, 17, 8, 45),
+  //       ownerUsername: 'Sabrina',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_3',
+  //       imageUrl: 'https://picsum.photos/id/1020/900/1200',
+  //       locationName: 'Chiang Mai University',
+  //       capturedAt: DateTime(2026, 7, 17, 9, 10),
+  //       ownerUsername: 'Cherry',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_4',
+  //       imageUrl: 'https://picsum.photos/id/1024/900/1200',
+  //       locationName: 'Chiang Mai University',
+  //       capturedAt: DateTime(2026, 7, 17, 9, 20),
+  //       ownerUsername: 'Pang',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_5',
+  //       imageUrl: 'https://picsum.photos/id/1031/900/1200',
+  //       locationName: 'Chiang Mai University',
+  //       capturedAt: DateTime(2026, 7, 17, 9, 35),
+  //       ownerUsername: 'Jig',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_6',
+  //       imageUrl: 'https://picsum.photos/id/1033/900/1200',
+  //       locationName: 'Chiang Mai University',
+  //       capturedAt: DateTime(2026, 7, 17, 9, 50),
+  //       ownerUsername: 'Sabrina',
+  //     ),
 
-      StoryHighlightPhoto(
-        id: 'photo_7',
-        imageUrl: 'https://picsum.photos/id/1035/900/1200',
-        locationName: 'One Nimman',
-        capturedAt: DateTime(2026, 7, 17, 12, 10),
-        ownerUsername: 'Cherry',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_8',
-        imageUrl: 'https://picsum.photos/id/1036/900/1200',
-        locationName: 'One Nimman',
-        capturedAt: DateTime(2026, 7, 17, 12, 20),
-        ownerUsername: 'Jig',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_9',
-        imageUrl: 'https://picsum.photos/id/1037/900/1200',
-        locationName: 'One Nimman',
-        capturedAt: DateTime(2026, 7, 17, 12, 30),
-        ownerUsername: 'Pang',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_10',
-        imageUrl: 'https://picsum.photos/id/1038/900/1200',
-        locationName: 'One Nimman',
-        capturedAt: DateTime(2026, 7, 17, 12, 40),
-        ownerUsername: 'Sabrina',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_11',
-        imageUrl: 'https://picsum.photos/id/1039/900/1200',
-        locationName: 'One Nimman',
-        capturedAt: DateTime(2026, 7, 17, 12, 55),
-        ownerUsername: 'Cherry',
-      ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_7',
+  //       imageUrl: 'https://picsum.photos/id/1035/900/1200',
+  //       locationName: 'One Nimman',
+  //       capturedAt: DateTime(2026, 7, 17, 12, 10),
+  //       ownerUsername: 'Cherry',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_8',
+  //       imageUrl: 'https://picsum.photos/id/1036/900/1200',
+  //       locationName: 'One Nimman',
+  //       capturedAt: DateTime(2026, 7, 17, 12, 20),
+  //       ownerUsername: 'Jig',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_9',
+  //       imageUrl: 'https://picsum.photos/id/1037/900/1200',
+  //       locationName: 'One Nimman',
+  //       capturedAt: DateTime(2026, 7, 17, 12, 30),
+  //       ownerUsername: 'Pang',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_10',
+  //       imageUrl: 'https://picsum.photos/id/1038/900/1200',
+  //       locationName: 'One Nimman',
+  //       capturedAt: DateTime(2026, 7, 17, 12, 40),
+  //       ownerUsername: 'Sabrina',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_11',
+  //       imageUrl: 'https://picsum.photos/id/1039/900/1200',
+  //       locationName: 'One Nimman',
+  //       capturedAt: DateTime(2026, 7, 17, 12, 55),
+  //       ownerUsername: 'Cherry',
+  //     ),
 
-      StoryHighlightPhoto(
-        id: 'photo_12',
-        imageUrl: 'https://picsum.photos/id/1040/900/1200',
-        locationName: 'Tha Phae Gate',
-        capturedAt: DateTime(2026, 7, 17, 15, 10),
-        ownerUsername: 'Jig',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_13',
-        imageUrl: 'https://picsum.photos/id/1041/900/1200',
-        locationName: 'Tha Phae Gate',
-        capturedAt: DateTime(2026, 7, 17, 15, 20),
-        ownerUsername: 'Sabrina',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_14',
-        imageUrl: 'https://picsum.photos/id/1042/900/1200',
-        locationName: 'Tha Phae Gate',
-        capturedAt: DateTime(2026, 7, 17, 15, 30),
-        ownerUsername: 'Pang',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_15',
-        imageUrl: 'https://picsum.photos/id/1043/900/1200',
-        locationName: 'Tha Phae Gate',
-        capturedAt: DateTime(2026, 7, 17, 15, 45),
-        ownerUsername: 'Cherry',
-      ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_12',
+  //       imageUrl: 'https://picsum.photos/id/1040/900/1200',
+  //       locationName: 'Tha Phae Gate',
+  //       capturedAt: DateTime(2026, 7, 17, 15, 10),
+  //       ownerUsername: 'Jig',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_13',
+  //       imageUrl: 'https://picsum.photos/id/1041/900/1200',
+  //       locationName: 'Tha Phae Gate',
+  //       capturedAt: DateTime(2026, 7, 17, 15, 20),
+  //       ownerUsername: 'Sabrina',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_14',
+  //       imageUrl: 'https://picsum.photos/id/1042/900/1200',
+  //       locationName: 'Tha Phae Gate',
+  //       capturedAt: DateTime(2026, 7, 17, 15, 30),
+  //       ownerUsername: 'Pang',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_15',
+  //       imageUrl: 'https://picsum.photos/id/1043/900/1200',
+  //       locationName: 'Tha Phae Gate',
+  //       capturedAt: DateTime(2026, 7, 17, 15, 45),
+  //       ownerUsername: 'Cherry',
+  //     ),
 
-      StoryHighlightPhoto(
-        id: 'photo_16',
-        imageUrl: 'https://picsum.photos/id/1044/900/1200',
-        locationName: 'Warorot Market',
-        capturedAt: DateTime(2026, 7, 17, 18, 10),
-        ownerUsername: 'Jig',
-      ),
-      StoryHighlightPhoto(
-        id: 'photo_17',
-        imageUrl: 'https://picsum.photos/id/1045/900/1200',
-        locationName: 'Warorot Market',
-        capturedAt: DateTime(2026, 7, 17, 18, 20),
-        ownerUsername: 'Sabrina',
-      ),
-    ];
-  }
+  //     StoryHighlightPhoto(
+  //       id: 'photo_16',
+  //       imageUrl: 'https://picsum.photos/id/1044/900/1200',
+  //       locationName: 'Warorot Market',
+  //       capturedAt: DateTime(2026, 7, 17, 18, 10),
+  //       ownerUsername: 'Jig',
+  //     ),
+  //     StoryHighlightPhoto(
+  //       id: 'photo_17',
+  //       imageUrl: 'https://picsum.photos/id/1045/900/1200',
+  //       locationName: 'Warorot Market',
+  //       capturedAt: DateTime(2026, 7, 17, 18, 20),
+  //       ownerUsername: 'Sabrina',
+  //     ),
+  //   ];
+  // }
 
   void _buildTopLocations() {
     final grouped = <String, List<StoryHighlightPhoto>>{};

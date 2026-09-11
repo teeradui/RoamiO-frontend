@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 
 enum TripAwardType {
   lateArrival,
@@ -10,6 +11,50 @@ enum TripAwardType {
   accommodation,
   transit,
 }
+
+class _AwardMeta {
+  final TripAwardType type;
+  final IconData icon;
+  const _AwardMeta(this.type, this.icon);
+}
+
+final Map<String, _AwardMeta> _awardMetaByName = {
+  // lateArrival
+  'Late Turtle': const _AwardMeta(TripAwardType.lateArrival, CupertinoIcons.tortoise_fill),
+  'Fashionably Late': const _AwardMeta(TripAwardType.lateArrival, Icons.watch_later_rounded),
+  'Last Minute Legend': const _AwardMeta(TripAwardType.lateArrival, Icons.timer_rounded),
+  'Slow & Steady': const _AwardMeta(TripAwardType.lateArrival, Icons.directions_walk_rounded),
+
+  // earlyArrival
+  'Early Bird': const _AwardMeta(TripAwardType.earlyArrival, Icons.wb_sunny_rounded),
+  'First on the Scene': const _AwardMeta(TripAwardType.earlyArrival, Icons.flag_rounded),
+  'Ready, Set, Roam!': const _AwardMeta(TripAwardType.earlyArrival, Icons.rocket_launch_rounded),
+  'Morning Hero': const _AwardMeta(TripAwardType.earlyArrival, Icons.light_mode_rounded),
+
+  // food
+  'Snack Commander': const _AwardMeta(TripAwardType.food, Icons.restaurant_rounded),
+  'Foodie Supreme': const _AwardMeta(TripAwardType.food, Icons.ramen_dining_rounded),
+  'Bite Boss': const _AwardMeta(TripAwardType.food, Icons.fastfood_rounded),
+  'Taste Explorer': const _AwardMeta(TripAwardType.food, Icons.local_dining_rounded),
+
+  // sightseeing
+  'Explorer Mode': const _AwardMeta(TripAwardType.sightseeing, Icons.explore_rounded),
+  'View Hunter': const _AwardMeta(TripAwardType.sightseeing, Icons.landscape_rounded),
+  'Sightseeing Star': const _AwardMeta(TripAwardType.sightseeing, Icons.photo_camera_rounded),
+  'Adventure Magnet': const _AwardMeta(TripAwardType.sightseeing, Icons.travel_explore_rounded),
+
+  // accommodation
+  'Cozy Commander': const _AwardMeta(TripAwardType.accommodation, Icons.hotel_rounded),
+  'Rest Master': const _AwardMeta(TripAwardType.accommodation, Icons.bed_rounded),
+  'Chill Champion': const _AwardMeta(TripAwardType.accommodation, Icons.night_shelter_rounded),
+  'Recharge Pro': const _AwardMeta(TripAwardType.accommodation, Icons.bedtime_rounded),
+
+  // transit
+  'Road Warrior': const _AwardMeta(TripAwardType.transit, Icons.route_rounded),
+  'Always on the Move': const _AwardMeta(TripAwardType.transit, Icons.directions_rounded),
+  'Born to Roam': const _AwardMeta(TripAwardType.transit, Icons.navigation_rounded),
+  'Transit Titan': const _AwardMeta(TripAwardType.transit, Icons.directions_bus_rounded),
+};
 
 class TripAwardPreset {
   final String title;
@@ -50,9 +95,13 @@ class StoryTripAward {
 }
 
 class StoryTripAwardsViewModel extends ChangeNotifier {
-  StoryTripAwardsViewModel({required this.tripId});
+  StoryTripAwardsViewModel({
+    required this.tripId,
+    TripSummaryService? tripSummaryService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService();
 
   final String tripId;
+  final TripSummaryService _tripSummaryService;
 
   List<StoryTripAward> awards = [];
 
@@ -235,7 +284,7 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
     );
   }
 
-  Future<void> loadTripAwards() async {
+    Future<void> loadTripAwards() async {
     debugPrint('========== LOAD STORY TRIP AWARDS ==========');
     debugPrint('Trip ID: $tripId');
 
@@ -244,51 +293,32 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      /*
-       * TEMPORARY MOCK DATA
-       *
-       * Backend จริงภายหลัง:
-       *
-       * - Late / Early
-       *   มาจาก attendance + tracking ตอนเริ่ม trip
-       *
-       * - Food / Sightseeing / Transit / Accommodation
-       *   มาจาก personalized activity analysis
-       */
+      final fetchedAwards = await _tripSummaryService.getAwards(tripId);
 
-      awards = [
-        _createAward(
-          userId: '1',
-          username: 'Sabrina',
-          type: TripAwardType.lateArrival,
-          isCurrentUser: false,
-        ),
-        _createAward(
-          userId: '2',
-          username: 'Cherry',
-          type: TripAwardType.earlyArrival,
-          isCurrentUser: false,
-        ),
-        _createAward(
-          userId: '3',
-          username: 'Pang',
-          type: TripAwardType.food,
-          isCurrentUser: false,
-        ),
-        _createAward(
-          userId: '4',
-          username: 'Teedy',
-          type: TripAwardType.sightseeing,
-          isCurrentUser: true,
-        ),
-      ];
+      // WIP (need to implement): backend does not yet return username
+      // for each award (Award only stores user_id). Also hardcoding
+      // isCurrentUser check to userId == '1' until real auth/current
+      // user id is wired in.
+      awards = fetchedAwards.map((award) {
+        final meta = _awardMetaByName[award.awardName];
 
-      debugPrint('TRIP AWARDS MOCK LOAD SUCCESS');
+        return StoryTripAward(
+          userId: award.userId ?? '',
+          username: 'WIP (need to implement)',
+          type: meta?.type ?? TripAwardType.sightseeing,
+          awardTitle: award.awardName,
+          awardSubtitle: award.awardDescription ?? 'WIP (need to implement)',
+          awardIcon: meta?.icon ?? Icons.emoji_events_rounded,
+          isCurrentUser: award.userId == '1',
+        );
+      }).toList();
+
+      debugPrint('TRIP AWARDS LOAD SUCCESS');
       debugPrint('Award count: ${awards.length}');
 
       for (final award in awards) {
         debugPrint(
-          '${award.username} → '
+          '${award.userId} → '
           '${award.awardTitle} '
           '(${award.type})',
         );
@@ -300,7 +330,16 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
 
       awards = [];
 
-      errorMessage = 'Unable to load trip awards.';
+      final message = error.toString().toLowerCase();
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        errorMessage = 'Unable to load trip awards.';
+      }
     } finally {
       isLoading = false;
 

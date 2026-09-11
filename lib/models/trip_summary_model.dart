@@ -129,6 +129,8 @@ class TripStop {
     this.longitude,
     this.enteredAt,
     this.exitedAt,
+    this.locationName,
+    this.locationType,
   });
 
   final String stopId;
@@ -136,6 +138,8 @@ class TripStop {
   final double? longitude;
   final DateTime? enteredAt;
   final DateTime? exitedAt;
+  final String? locationName;
+  final String? locationType;
 
   factory TripStop.fromJson(Map<String, dynamic> json) {
     return TripStop(
@@ -144,6 +148,8 @@ class TripStop {
       longitude: _parseDouble(json['longitude']),
       enteredAt: _parseDateTime(json['enteredAt'] ?? json['entered_at']),
       exitedAt: _parseDateTime(json['exitedAt'] ?? json['exited_at']),
+      locationName: json['locationName']?.toString() ?? json['location_name']?.toString(),
+      locationType: json['locationType']?.toString() ?? json['location_type']?.toString(),
     );
   }
 }
@@ -236,6 +242,7 @@ class StoryData {
     required this.awards,
     required this.photos,
     required this.activityTypeCounts,
+    required this.reliabilityScores
   });
 
   final List<TripSummaryTripInfo> trips;
@@ -245,6 +252,7 @@ class StoryData {
   final List<TripAward> awards;
   final List<TripPhoto> photos;
   final List<ActivityTypeCount> activityTypeCounts;
+  final List<TripMemberReliability> reliabilityScores;
 
   factory StoryData.fromJson(Map<String, dynamic> json) {
     return StoryData(
@@ -269,6 +277,9 @@ class StoryData {
       activityTypeCounts: (json['activityTypeCounts'] as List? ?? [])
           .map((e) => ActivityTypeCount.fromJson(e as Map<String, dynamic>))
           .toList(),
+      reliabilityScores: (json['tripMemberReliabilityScores'] as List? ?? [])
+          .map((e) => TripMemberReliability.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -284,4 +295,47 @@ double? _parseDouble(dynamic value) {
   if (value == null) return null;
   if (value is num) return value.toDouble();
   return double.tryParse(value.toString());
+}
+
+enum ReliabilityAttendance { early, onTime, late, veryLate, missing }
+
+ReliabilityAttendance _attendanceFromString(String? value) {
+  switch (value) {
+    case 'Early':
+      return ReliabilityAttendance.early;
+    case 'OnTime':
+      return ReliabilityAttendance.onTime;
+    case 'Late':
+      return ReliabilityAttendance.late;
+    case 'VeryLate':
+      return ReliabilityAttendance.veryLate;
+    case 'Missing':
+    default:
+      return ReliabilityAttendance.missing;
+  }
+}
+
+class TripMemberReliability {
+  const TripMemberReliability({
+    required this.userId,
+    required this.username,
+    required this.attendance,
+    required this.currentScore,
+  });
+
+  final String userId;
+  final String username;
+  final ReliabilityAttendance attendance;
+  final double currentScore;
+
+  factory TripMemberReliability.fromJson(Map<String, dynamic> json) {
+    return TripMemberReliability(
+      userId: json['userId']?.toString() ?? json['user_id']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      attendance: _attendanceFromString(
+        json['attendance']?.toString(),
+      ),
+      currentScore: _parseDouble(json['reliabilityScore'] ?? json['reliability_score']) ?? 200,
+    );
+  }
 }

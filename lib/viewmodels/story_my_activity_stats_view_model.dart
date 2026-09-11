@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/viewmodels/overview_section_view_model.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 
 class StoryMyActivityHighlight {
   final String title;
@@ -15,9 +16,13 @@ class StoryMyActivityHighlight {
 }
 
 class StoryMyActivityStatsViewModel extends ChangeNotifier {
-  StoryMyActivityStatsViewModel({required this.tripId});
+  StoryMyActivityStatsViewModel({
+    required this.tripId,
+    TripSummaryService? tripSummaryService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService();
 
   final String tripId;
+  final TripSummaryService _tripSummaryService;
 
   bool isLoading = false;
   String? errorMessage;
@@ -164,15 +169,17 @@ class StoryMyActivityStatsViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    try {
-      // TEMP MOCK DATA
-      // TODO: เปลี่ยนเป็นข้อมูลจาก Overview/Backend ภายหลัง
-      myActivityStats = const [
-        OverviewRadarItem(label: 'Food', value: 9),
-        OverviewRadarItem(label: 'Sightseeing', value: 6),
-        OverviewRadarItem(label: 'Accommodation', value: 3),
-        OverviewRadarItem(label: 'Transit', value: 5),
-      ];
+        try {
+      final graphData = await _tripSummaryService.getActivityGraphData(tripId);
+
+      myActivityStats = graphData.activityTypeCounts
+          .map(
+            (item) => OverviewRadarItem(
+              label: item.activityType,
+              value: item.count.toDouble(),
+            ),
+          )
+          .toList();
 
       if (myActivityStats.isNotEmpty) {
         final topActivity = myActivityStats.reduce(

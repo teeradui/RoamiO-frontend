@@ -199,7 +199,7 @@ class OverviewSectionViewModel extends ChangeNotifier {
   }*/
 
   //mock data
-    Future<void> _loadCompletedFromBackend() async {
+  Future<void> _loadCompletedFromBackend() async {
     isLoading = true;
     notifyListeners();
 

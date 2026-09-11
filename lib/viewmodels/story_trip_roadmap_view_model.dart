@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:roamio_frontend/models/services/location_service.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 
 class StoryRoadmapStop {
   final String id;
@@ -19,12 +20,16 @@ class StoryRoadmapStop {
 }
 
 class StoryTripRoadmapViewModel extends ChangeNotifier {
-  StoryTripRoadmapViewModel({required this.tripId});
+  StoryTripRoadmapViewModel({
+    required this.tripId,
+    TripSummaryService? tripSummaryService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService();
 
   final String tripId;
+  final TripSummaryService _tripSummaryService;
   final PolylinePoints _polylinePoints = PolylinePoints(
-  apiKey: LocationService.googleApiKey,
-);
+    apiKey: LocationService.googleApiKey,
+  );
 
   bool isLoading = false;
   bool isAnimating = false;
@@ -176,58 +181,30 @@ Future<void> _loadGoogleRoute() async {
     debugPrint('==========================================');
   }
 
-  Future<void> loadRoadmap() async {
+    Future<void> loadRoadmap() async {
     debugPrint('========== LOAD STORY TRIP ROADMAP ==========');
     debugPrint('Trip ID: $tripId');
 
     isLoading = true;
     errorMessage = null;
-    //notifyListeners();
 
     try {
-      /*
-       * TEMPORARY MOCK DATA
-       *
-       * Google Map = ของจริง
-       * Mock เฉพาะ:
-       * - Stops
-       * - Route coordinates
-       *
-       * TODO:
-       * เปลี่ยนเป็นข้อมูลจาก Backend ภายหลัง
-       */
+      final summary = await _tripSummaryService.getSummary(tripId);
 
-      stops = const [
-        StoryRoadmapStop(
-          id: 'stop_1',
-          name: 'Chiang Mai University',
-          type: 'Starting Point',
-          location: LatLng(18.7998, 98.9507),
-        ),
+      final validStops = summary.stops
+          .where((s) => s.latitude != null && s.longitude != null)
+          .toList();
 
-        StoryRoadmapStop(
-          id: 'stop_2',
-          name: 'One Nimman',
-          type: 'Shopping',
-          location: LatLng(18.8004, 98.9679),
-        ),
-
-        StoryRoadmapStop(
-          id: 'stop_3',
-          name: 'Tha Phae Gate',
-          type: 'Sightseeing',
-          location: LatLng(18.7877, 98.9931),
-        ),
-
-        StoryRoadmapStop(
-          id: 'stop_4',
-          name: 'Warorot Market',
-          type: 'Food',
-          location: LatLng(18.7902, 99.0004),
-        ),
-      ];
-
-      
+      stops = validStops
+          .map(
+            (s) => StoryRoadmapStop(
+              id: s.stopId,
+              name: s.locationName ?? 'WIP (need to implement)',
+              type: s.locationType ?? 'WIP (need to implement)',
+              location: LatLng(s.latitude!, s.longitude!),
+            ),
+          )
+          .toList();
 
       await _loadGoogleRoute();
 
@@ -236,7 +213,7 @@ Future<void> _loadGoogleRoute() async {
       carPosition = null;
       visibleRoutePoints = [];
 
-      debugPrint('ROADMAP MOCK LOAD SUCCESS');
+      debugPrint('ROADMAP LOAD SUCCESS');
       debugPrint('Stops: ${stops.length}');
       debugPrint('Route points: ${routePoints.length}');
       debugPrint('Car position: $carPosition');
@@ -259,7 +236,16 @@ Future<void> _loadGoogleRoute() async {
       carPosition = null;
       currentStopIndex = 0;
 
-      errorMessage = 'Unable to load trip roadmap.';
+      final message = error.toString().toLowerCase();
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        errorMessage = 'Unable to load trip roadmap.';
+      }
     } finally {
       isLoading = false;
 

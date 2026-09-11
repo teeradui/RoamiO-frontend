@@ -3,6 +3,8 @@ import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 import 'package:roamio_frontend/theme/colors.dart';
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
+import 'package:roamio_frontend/models/trip_summary_model.dart' as summary_model;
 
 enum ReliabilityArrivalStatus {
   arrivedEarly,
@@ -47,9 +49,13 @@ class ReliabilityRuleItem {
 }
 
 class StoryReliabilityScoresViewModel extends ChangeNotifier {
-  StoryReliabilityScoresViewModel({required this.tripId});
+  StoryReliabilityScoresViewModel({
+    required this.tripId,
+    TripSummaryService? tripSummaryService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService();
 
   final String tripId;
+  final TripSummaryService _tripSummaryService;
 
   static const int startingScore = 200;
 
@@ -93,6 +99,27 @@ class StoryReliabilityScoresViewModel extends ChangeNotifier {
     ),
   ];
 
+  ReliabilityArrivalStatus _statusFromAttendance(
+    summary_model.ReliabilityAttendance attendance,
+  ) {
+    switch (attendance) {
+      case summary_model.ReliabilityAttendance.early:
+        return ReliabilityArrivalStatus.arrivedEarly;
+      case summary_model.ReliabilityAttendance.onTime:
+        return ReliabilityArrivalStatus.onTime;
+      case summary_model.ReliabilityAttendance.late:
+        return ReliabilityArrivalStatus.slightDelay;
+      case summary_model.ReliabilityAttendance.veryLate:
+        return ReliabilityArrivalStatus.extendedDelay;
+      case summary_model.ReliabilityAttendance.missing:
+        return ReliabilityArrivalStatus.ghost;
+    }
+  }
+
+  int _scoreChangeForStatus(ReliabilityArrivalStatus status) {
+    return rules.firstWhere((rule) => rule.status == status).scoreChange;
+  }
+
   Future<void> loadReliabilityScores() async {
     debugPrint('========== LOAD STORY RELIABILITY SCORES ==========');
     debugPrint('Trip ID: $tripId');
@@ -102,54 +129,21 @@ class StoryReliabilityScoresViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      /*
-       * TEMPORARY MOCK DATA
-       *
-       * TODO:
-       * ภายหลังเปลี่ยนเป็นข้อมูลจาก backend
-       * ซึ่ง backend จะคำนวณจาก attendance/tracking
-       * ตอนเริ่ม Trip
-       */
+      final storyData = await _tripSummaryService.getStoryData(tripId);
 
-      members = const [
-        StoryReliabilityMember(
-          userId: '1',
-          username: 'Teedy',
-          arrivalStatus: ReliabilityArrivalStatus.arrivedEarly,
-          scoreChange: 25,
-          currentScore: 225,
-        ),
-        StoryReliabilityMember(
-          userId: '2',
-          username: 'Cherry',
-          arrivalStatus: ReliabilityArrivalStatus.onTime,
-          scoreChange: 15,
-          currentScore: 215,
-        ),
-        StoryReliabilityMember(
-          userId: '3',
-          username: 'Sabrina',
-          arrivalStatus: ReliabilityArrivalStatus.slightDelay,
-          scoreChange: -10,
-          currentScore: 190,
-        ),
-        StoryReliabilityMember(
-          userId: '4',
-          username: 'Pang',
-          arrivalStatus: ReliabilityArrivalStatus.extendedDelay,
-          scoreChange: -20,
-          currentScore: 180,
-        ),
-        StoryReliabilityMember(
-          userId: '5',
-          username: 'Mint',
-          arrivalStatus: ReliabilityArrivalStatus.ghost,
-          scoreChange: -30,
-          currentScore: 170,
-        ),
-      ];
+      members = storyData.reliabilityScores.map((entry) {
+        final status = _statusFromAttendance(entry.attendance);
 
-      debugPrint('RELIABILITY MOCK LOAD SUCCESS');
+        return StoryReliabilityMember(
+          userId: entry.userId,
+          username: entry.username,
+          arrivalStatus: status,
+          scoreChange: _scoreChangeForStatus(status),
+          currentScore: entry.currentScore.round(),
+        );
+      }).toList();
+
+      debugPrint('RELIABILITY LOAD SUCCESS');
       debugPrint('Member count: ${members.length}');
 
       for (final member in members) {
@@ -162,17 +156,23 @@ class StoryReliabilityScoresViewModel extends ChangeNotifier {
       }
     } catch (error, stackTrace) {
       debugPrint('LOAD STORY RELIABILITY ERROR: $error');
-
       debugPrintStack(stackTrace: stackTrace);
 
       members = [];
 
-      errorMessage = 'Unable to load reliability scores.';
+      final message = error.toString().toLowerCase();
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        errorMessage = 'Unable to load reliability scores.';
+      }
     } finally {
       isLoading = false;
-
       debugPrint('=================================================');
-
       notifyListeners();
     }
   }
