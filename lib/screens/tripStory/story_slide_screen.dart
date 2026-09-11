@@ -6,7 +6,7 @@ import 'package:roamio_frontend/screens/tripStory/story_share_recording_screen.d
 import 'package:roamio_frontend/screens/tripStory/story_share_slide_selector.dart';
 import 'package:roamio_frontend/screens/tripStory/widgets/story_slide_body.dart';
 
-enum StorySharePlatform { instagram, facebook }
+enum StorySharePlatform { instagram }
 
 class StorySlideScreen extends StatefulWidget {
   const StorySlideScreen({super.key, required this.tripId});
@@ -134,16 +134,6 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
                     Navigator.pop(sheetContext, StorySharePlatform.instagram);
                   },
                 ),
-
-                const SizedBox(height: 10),
-
-                _SharePlatformTile(
-                  icon: Icons.facebook_rounded,
-                  label: 'Facebook',
-                  onTap: () {
-                    Navigator.pop(sheetContext, StorySharePlatform.facebook);
-                  },
-                ),
               ],
             ),
           ),
@@ -201,10 +191,6 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
         case StorySharePlatform.instagram:
           target = ShareTarget.instagramStory;
           break;
-
-        case StorySharePlatform.facebook:
-          target = ShareTarget.facebookStory;
-          break;
       }
 
       final isAvailable = await SocialSharePlus.isAvailable(target);
@@ -226,15 +212,6 @@ class _StorySlideScreenState extends State<StorySlideScreen> {
       switch (platform) {
         case StorySharePlatform.instagram:
           result = await SocialSharePlus.instagramStory(
-            config: StoryConfig(
-              appId: 'YOUR_FACEBOOK_APP_ID',
-              backgroundVideoPath: videoPath,
-            ),
-          );
-          break;
-
-        case StorySharePlatform.facebook:
-          result = await SocialSharePlus.facebookStory(
             config: StoryConfig(
               appId: 'YOUR_FACEBOOK_APP_ID',
               backgroundVideoPath: videoPath,
