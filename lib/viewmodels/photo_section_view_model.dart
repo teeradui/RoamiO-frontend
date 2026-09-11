@@ -42,6 +42,8 @@ class TripPhotoGroup {
   final List<TripPhotoItem> photos;
 }
 
+enum PhotoSelectionAction { save, delete }
+
 class PhotoSectionViewModel extends ChangeNotifier {
   PhotoSectionViewModel({
     required this.tripId,
@@ -79,13 +81,70 @@ class PhotoSectionViewModel extends ChangeNotifier {
 
   bool _hasLoadedPhotos = false;
 
+  // =========================================================
+  // PHOTO SELECTION
+  // =========================================================
+
+  bool isSelectionMode = false;
+
+  PhotoSelectionAction? selectionAction;
+
+  final Set<String> selectedPhotoIds = {};
+
+  bool get hasSelectedPhotos => selectedPhotoIds.isNotEmpty;
+
+  int get selectedPhotoCount => selectedPhotoIds.length;
+
+  bool get areAllPhotosSelected =>
+      photos.isNotEmpty && selectedPhotoIds.length == photos.length;
+
+  String get selectionTitle {
+    switch (selectionAction) {
+      case PhotoSelectionAction.save:
+        return 'Select photos to save';
+
+      case PhotoSelectionAction.delete:
+        return 'Select photos to delete';
+
+      case null:
+        return '';
+    }
+  }
+
+  String get confirmButtonText {
+    switch (selectionAction) {
+      case PhotoSelectionAction.save:
+        return 'Save';
+
+      case PhotoSelectionAction.delete:
+        return 'Delete';
+
+      case null:
+        return '';
+    }
+  }
+
   bool get isUpcoming => tripStatus == TripStatus.upcoming;
 
   bool get isActive => tripStatus == TripStatus.active;
 
   bool get isCompleted => tripStatus == TripStatus.completed;
 
-  bool get canSelectAlbum => isUpcoming || isActive;
+  bool get canSelectAlbum {
+    if (isUpcoming || isActive) {
+      return true;
+    }
+
+    if (isCompleted) {
+      if (!hasSelectedAlbum) {
+        return false;
+      }
+
+      return !hasPhotos || errorMessage != null;
+    }
+
+    return false;
+  }
 
   bool get hasSelectedAlbum => selectedAlbumName.trim().isNotEmpty;
 
@@ -93,21 +152,38 @@ class PhotoSectionViewModel extends ChangeNotifier {
 
   bool get hasPhotoGroups => photoGroups.isNotEmpty;
 
-  String get selectAlbumText {
+  String get albumTitleText {
     if (hasSelectedAlbum) {
       return selectedAlbumName;
     }
 
     if (isCompleted) {
-      return 'Album selection is unavailable after the trip is completed';
+      return 'Album Selection Unavailable';
+    }
+
+    return 'Select Photo Album';
+  }
+
+  String get albumSubtitleText {
+  if (isUpcoming || isActive) {
+    if (hasSelectedAlbum) {
+      return 'Change album';
     }
 
     return 'Please select photo album before your trip start';
   }
+  if (isCompleted && !hasSelectedAlbum) {
+    return 'No album was selected before this trip was completed';
+  }
 
-  // =========================================================
-  // INITIAL LOAD
-  // =========================================================
+  if (isCompleted &&
+      hasSelectedAlbum &&
+      (!hasPhotos || errorMessage != null)) {
+    return 'Change album';
+  }
+
+  return 'Album selection is unavailable after the trip is completed';
+}
 
   Future<void> initialize() async {
     debugPrint('========== INITIALIZE PHOTO SECTION ==========');
@@ -274,6 +350,160 @@ class PhotoSectionViewModel extends ChangeNotifier {
       notifyListeners();
 
       debugPrint('======================================');
+    }
+  }
+
+  // =========================================================
+  // PHOTO SELECTION
+  // =========================================================
+
+  void enterSelectionMode(PhotoSelectionAction action) {
+    debugPrint('========== ENTER PHOTO SELECTION ==========');
+    debugPrint('ACTION: $action');
+
+    isSelectionMode = true;
+    selectionAction = action;
+
+    selectedPhotoIds.clear();
+
+    notifyListeners();
+  }
+
+  void togglePhotoSelection(String photoId) {
+    if (!isSelectionMode) {
+      return;
+    }
+
+    if (selectedPhotoIds.contains(photoId)) {
+      selectedPhotoIds.remove(photoId);
+
+      debugPrint('UNSELECT PHOTO: $photoId');
+    } else {
+      selectedPhotoIds.add(photoId);
+
+      debugPrint('SELECT PHOTO: $photoId');
+    }
+
+    debugPrint('SELECTED COUNT: ${selectedPhotoIds.length}');
+
+    notifyListeners();
+  }
+
+  bool isPhotoSelected(String photoId) {
+    return selectedPhotoIds.contains(photoId);
+  }
+
+  void toggleSelectAll() {
+    if (!isSelectionMode) {
+      return;
+    }
+
+    if (areAllPhotosSelected) {
+      selectedPhotoIds.clear();
+
+      debugPrint('UNSELECT ALL PHOTOS');
+    } else {
+      selectedPhotoIds
+        ..clear()
+        ..addAll(photos.map((photo) => photo.id));
+
+      debugPrint('SELECT ALL PHOTOS: ${selectedPhotoIds.length}');
+    }
+
+    notifyListeners();
+  }
+
+  void cancelSelection() {
+    debugPrint('CANCEL PHOTO SELECTION');
+
+    isSelectionMode = false;
+    selectionAction = null;
+    selectedPhotoIds.clear();
+
+    notifyListeners();
+  }
+
+  Future<bool> confirmSelection() async {
+    if (!hasSelectedPhotos || selectionAction == null) {
+      return false;
+    }
+
+    debugPrint('========== CONFIRM PHOTO SELECTION ==========');
+    debugPrint('ACTION: $selectionAction');
+    debugPrint('SELECTED PHOTOS: $selectedPhotoIds');
+
+    switch (selectionAction!) {
+      case PhotoSelectionAction.save:
+        return _saveSelectedPhotos();
+
+      case PhotoSelectionAction.delete:
+        return _deleteSelectedPhotos();
+    }
+  }
+
+  Future<bool> _saveSelectedPhotos() async {
+    try {
+      /*
+     * TEMP MOCK
+     *
+     * TODO:
+     * download/save selected photos
+     * to device gallery
+     */
+
+      debugPrint('SAVING ${selectedPhotoIds.length} PHOTOS...');
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      debugPrint('SAVE PHOTOS SUCCESS');
+
+      cancelSelection();
+
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('SAVE PHOTOS ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      errorMessage = 'Unable to save photos. Please try again.';
+
+      notifyListeners();
+
+      return false;
+    }
+  }
+
+  Future<bool> _deleteSelectedPhotos() async {
+    try {
+      /*
+     * TEMP MOCK
+     *
+     * TODO:
+     * delete selected photos through backend
+     */
+
+      debugPrint('DELETING ${selectedPhotoIds.length} PHOTOS...');
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      photos.removeWhere((photo) => selectedPhotoIds.contains(photo.id));
+
+      _groupPhotos();
+
+      debugPrint('DELETE PHOTOS SUCCESS');
+      debugPrint('REMAINING PHOTOS: ${photos.length}');
+
+      cancelSelection();
+
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('DELETE PHOTOS ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      errorMessage = 'Unable to delete photos. Please try again.';
+
+      notifyListeners();
+
+      return false;
     }
   }
 

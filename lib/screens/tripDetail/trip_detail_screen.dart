@@ -8,6 +8,7 @@ import 'package:roamio_frontend/screens/tripDetail/widgets/overview_section.dart
 import 'package:roamio_frontend/screens/tripDetail/widgets/photo_section.dart';
 import 'package:roamio_frontend/screens/tripStory/story_slide_screen.dart';
 import 'package:roamio_frontend/theme/colors.dart';
+import 'package:roamio_frontend/viewmodels/photo_section_view_model.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 import 'package:roamio_frontend/screens/tripDetail/widgets/section_tab.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
@@ -23,6 +24,10 @@ class TripDetailScreen extends StatefulWidget {
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
   late final TripDetailViewModel viewModel;
+
+  final PhotoSectionController photoSectionController =
+      PhotoSectionController();
+
   bool _tripChanged = false;
 
   @override
@@ -38,8 +43,48 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   @override
   void dispose() {
+    photoSectionController.dispose();
     viewModel.dispose();
     super.dispose();
+  }
+
+  Future<void> _handlePhotoSelectionConfirm() async {
+    final action = photoSectionController.selectionAction;
+
+    if (action == null) {
+      return;
+    }
+
+    // DELETE ต้องถามยืนยันก่อน
+    if (action == PhotoSelectionAction.delete) {
+      final count = photoSectionController.selectedPhotoCount;
+
+      final confirmed = await _showConfirmationDialog(
+        title: 'Delete photos?',
+        message:
+            'Are you sure you want to delete '
+            '$count selected photo${count > 1 ? 's' : ''}?',
+        confirmText: 'Delete',
+      );
+
+      if (!confirmed || !mounted) {
+        return;
+      }
+    }
+
+    final success = await photoSectionController.confirmSelection();
+
+    if (!mounted || !success) {
+      return;
+    }
+
+    final message = action == PhotoSelectionAction.delete
+        ? 'Photos deleted successfully.'
+        : 'Photos saved successfully.';
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _buildSelectedSection() {
@@ -54,9 +99,16 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       case TripDetailSection.activities:
         return ActivitiesSection(tripId: widget.tripId);
       case TripDetailSection.photo:
-        return PhotoSection(tripId: widget.tripId, tripStatus: viewModel.status);
+        return PhotoSection(
+          tripId: widget.tripId,
+          tripStatus: viewModel.status,
+          controller: photoSectionController,
+        );
       case TripDetailSection.member:
-        return MemberSection(tripId: widget.tripId);
+        return MemberSection(
+          tripId: widget.tripId,
+          tripStatus: viewModel.status,
+        );
     }
   }
 
@@ -500,34 +552,39 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                                         color: AppColors.textPrimary,
                                       ),
                                     ),
-                                    IconButton(
-                                      onPressed: () async {
-                                        final updated =
-                                            await Navigator.push<bool>(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => EditTripScreen(
-                                                  tripId: viewModel.tripId,
+                                    if (!viewModel.isCompleted &&
+                                        !viewModel.isActive) ...[
+                                      IconButton(
+                                        onPressed: () async {
+                                          final updated =
+                                              await Navigator.push<bool>(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      EditTripScreen(
+                                                        tripId:
+                                                            viewModel.tripId,
+                                                      ),
                                                 ),
-                                              ),
+                                              );
+
+                                          if (!mounted) return;
+
+                                          if (updated == true) {
+                                            _tripChanged = true;
+
+                                            await viewModel.loadTrip(
+                                              forceRefresh: true,
                                             );
-
-                                        if (!mounted) return;
-
-                                        if (updated == true) {
-                                          _tripChanged = true;
-
-                                          await viewModel.loadTrip(
-                                            forceRefresh: true,
-                                          );
-                                        }
-                                      },
-                                      icon: const HugeIcon(
-                                        icon:
-                                            HugeIcons.strokeRoundedPencilEdit01,
-                                        color: AppColors.iconOrange,
+                                          }
+                                        },
+                                        icon: const HugeIcon(
+                                          icon: HugeIcons
+                                              .strokeRoundedPencilEdit01,
+                                          color: AppColors.iconOrange,
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ],
                                 ),
 
@@ -685,8 +742,131 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                 ],
               ),
             ),
+            bottomNavigationBar:
+                viewModel.selectedSection == TripDetailSection.photo
+                ? AnimatedBuilder(
+                    animation: photoSectionController,
+                    builder: (context, _) {
+                      if (!photoSectionController.isSelectionMode) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return _PhotoSelectionBottomBar(
+                        action: photoSectionController.selectionAction!,
+                        hasSelectedPhotos:
+                            photoSectionController.hasSelectedPhotos,
+                        selectedCount:
+                            photoSectionController.selectedPhotoCount,
+                        onCancel: photoSectionController.cancelSelection,
+                        onConfirm: _handlePhotoSelectionConfirm,
+                      );
+                    },
+                  )
+                : null,
           );
         },
+      ),
+    );
+  }
+}
+
+class _PhotoSelectionBottomBar extends StatelessWidget {
+  const _PhotoSelectionBottomBar({
+    required this.action,
+    required this.hasSelectedPhotos,
+    required this.selectedCount,
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  final PhotoSelectionAction action;
+  final bool hasSelectedPhotos;
+  final int selectedCount;
+
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDelete = action == PhotoSelectionAction.delete;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        decoration: BoxDecoration(
+          color: AppColors.bgPrimary,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              spreadRadius: 0,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$selectedCount selected',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onCancel,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.textDisabled),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: hasSelectedPhotos ? onConfirm : null,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      backgroundColor: isDelete
+                          ? AppColors.red
+                          : AppColors.btnPrimary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.bgAccent,
+                      disabledForegroundColor: AppColors.textDisabled,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      isDelete ? 'Delete' : 'Save',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -752,50 +932,49 @@ class _ViewTripStoryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      
-        width: double.infinity,
-        height: 52,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: ElevatedButton.icon(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => StorySlideScreen(tripId: tripId)),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.bgCard,
-            foregroundColor: AppColors.textPrimary,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
+      width: double.infinity,
+      height: 52,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
-          icon: ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: AppColors.sparkle,
-            ).createShader(bounds),
-            child: const Icon(
-              FluentIcons.sparkle_32_filled,
-              size: 20,
-              color: Colors.white,
-            ),
-          ),
-          label: const Text(
-            "View Trip Wrap-up Story",
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => StorySlideScreen(tripId: tripId)),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.bgCard,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
-      );
+        icon: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppColors.sparkle,
+          ).createShader(bounds),
+          child: const Icon(
+            FluentIcons.sparkle_32_filled,
+            size: 20,
+            color: Colors.white,
+          ),
+        ),
+        label: const Text(
+          "View Trip Wrap-up Story",
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
   }
 }

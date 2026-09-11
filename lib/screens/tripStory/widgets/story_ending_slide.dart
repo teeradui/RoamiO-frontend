@@ -9,11 +9,14 @@ class StoryEndingSlide extends StatefulWidget {
     super.key,
     required this.tripId,
     required this.onDone,
+    required this.onShare,
   });
 
   final String tripId;
 
   final VoidCallback onDone;
+
+  final Future<void> Function() onShare;
 
   @override
   State<StoryEndingSlide> createState() => _StoryEndingSlideState();
@@ -47,16 +50,7 @@ class _StoryEndingSlideState extends State<StoryEndingSlide>
   Future<void> _handleShare() async {
     debugPrint('ENDING SLIDE: SHARE BUTTON PRESSED');
 
-    final generated = await viewModel.prepareStoryVideo();
-
-    if (!mounted) return;
-
-    if (!generated) {
-      await _showErrorAlert();
-      return;
-    }
-
-    await _showSharePlatformSheet();
+    await widget.onShare();
   }
 
   Future<void> _showSharePlatformSheet() async {
