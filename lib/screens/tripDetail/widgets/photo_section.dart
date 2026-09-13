@@ -1,9 +1,15 @@
+import 'dart:io';
+import 'dart:async';
+import 'package:flutter/services.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/photo_section_view_model.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
+import 'package:photo_manager/photo_manager.dart';
+import 'package:roamio_frontend/models/services/photo_album_service.dart';
 
 class PhotoSectionController extends ChangeNotifier {
   PhotoSectionViewModel? _viewModel;
@@ -65,11 +71,15 @@ class PhotoSection extends StatefulWidget {
     required this.tripId,
     required this.tripStatus,
     required this.controller,
+    required this.tripStartDateTime,
+    required this.tripEndDateTime,
   });
 
   final String tripId;
   final TripStatus tripStatus;
   final PhotoSectionController controller;
+  final DateTime? tripStartDateTime;
+  final DateTime? tripEndDateTime;
 
   @override
   State<PhotoSection> createState() => _PhotoSectionState();
@@ -77,6 +87,25 @@ class PhotoSection extends StatefulWidget {
 
 class _PhotoSectionState extends State<PhotoSection> {
   late final PhotoSectionViewModel viewModel;
+  Timer? _photoRefreshDebounce;
+
+  void _handlePhotoLibraryChanged(MethodCall call) {
+    if (!mounted || !viewModel.hasSelectedAlbum || !viewModel.isActive) {
+      return;
+    }
+
+    _photoRefreshDebounce?.cancel();
+
+    _photoRefreshDebounce = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted) {
+        return;
+      }
+
+      debugPrint('PHOTO LIBRARY CHANGED → REFRESH');
+
+      viewModel.loadPhotosFromSelectedAlbum();
+    });
+  }
 
   @override
   void initState() {
@@ -85,19 +114,327 @@ class _PhotoSectionState extends State<PhotoSection> {
     viewModel = PhotoSectionViewModel(
       tripId: widget.tripId,
       tripStatus: widget.tripStatus,
+      tripStartDateTime: widget.tripStartDateTime,
+      tripEndDateTime: widget.tripEndDateTime,
     );
 
     widget.controller.attach(viewModel);
 
     viewModel.initialize();
+
+    PhotoManager.addChangeCallback(_handlePhotoLibraryChanged);
+
+    PhotoManager.startChangeNotify();
   }
 
   @override
   void dispose() {
+    _photoRefreshDebounce?.cancel();
+    PhotoManager.removeChangeCallback(_handlePhotoLibraryChanged);
+
+    PhotoManager.stopChangeNotify();
+
     widget.controller.detach(viewModel);
     viewModel.dispose();
 
     super.dispose();
+  }
+
+  Future<void> _showAlbumPicker() async {
+    try {
+      final albums = await viewModel.loadAvailableAlbums();
+
+      if (!mounted) return;
+
+      if (albums.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No photo albums found.')));
+        return;
+      }
+
+      DevicePhotoAlbum? selectedAlbum;
+
+      if (Platform.isIOS) {
+        selectedAlbum = await _showIOSAlbumPicker(albums);
+      } else {
+        selectedAlbum = await _showAndroidAlbumPicker(albums);
+      }
+
+      if (!mounted || selectedAlbum == null) {
+        return;
+      }
+
+      await viewModel.selectAlbum(selectedAlbum);
+    } catch (error) {
+      if (!mounted) return;
+
+      final message = error.toString();
+
+      if (message.contains('PHOTO_PERMISSION_DENIED')) {
+        await _showPhotoPermissionDialog();
+      }
+    }
+  }
+
+  Future<DevicePhotoAlbum?> _showIOSAlbumPicker(
+    List<DevicePhotoAlbum> albums,
+  ) async {
+    return showModalBottomSheet<DevicePhotoAlbum>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: CupertinoColors.systemBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.72,
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+
+                Container(
+                  width: 38,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey4,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                const Text(
+                  'Select Album',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: CupertinoColors.label,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: albums.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final album = albums[index];
+
+                      final isSelected = viewModel.selectedAlbumId == album.id;
+
+                      return CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          Navigator.pop(context, album);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: CupertinoColors.secondarySystemBackground,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: SizedBox(
+                                  width: 72,
+                                  height: 72,
+                                  child: album.coverBytes != null
+                                      ? Image.memory(
+                                          album.coverBytes!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          color: CupertinoColors.systemGrey5,
+                                          child: const Icon(
+                                            CupertinoIcons.photo,
+                                            color: CupertinoColors.systemGrey,
+                                            size: 28,
+                                          ),
+                                        ),
+                                ),
+                              ),
+
+                              const SizedBox(width: 14),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      album.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: CupertinoColors.label,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 4),
+
+                                    Text(
+                                      '${album.assetCount} photos',
+                                      style: const TextStyle(
+                                        color: CupertinoColors.secondaryLabel,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              if (isSelected)
+                                const Icon(
+                                  CupertinoIcons.check_mark_circled_solid,
+                                  color: CupertinoColors.activeBlue,
+                                  size: 24,
+                                )
+                              else
+                                const Icon(
+                                  CupertinoIcons.chevron_forward,
+                                  color: CupertinoColors.systemGrey2,
+                                  size: 18,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<DevicePhotoAlbum?> _showAndroidAlbumPicker(
+    List<DevicePhotoAlbum> albums,
+  ) async {
+    return showModalBottomSheet<DevicePhotoAlbum>(
+      context: context,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+
+              Container(
+                width: 42,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: AppColors.textDisabled,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              const Text(
+                'Select Photo Album',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: albums.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.bgAccent),
+                  itemBuilder: (context, index) {
+                    final album = albums[index];
+
+                    final isSelected = viewModel.selectedAlbumId == album.id;
+
+                    return ListTile(
+                      leading: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedAlbum02,
+                        color: AppColors.btnPrimary,
+                        size: 24,
+                      ),
+                      title: Text(
+                        album.name,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${album.assetCount} photos',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.btnPrimary,
+                            )
+                          : null,
+                      onTap: () {
+                        Navigator.pop(context, album);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showPhotoPermissionDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Photo Access Required'),
+          content: const Text(
+            'Please allow RoamiO to access your photo library to select a trip album.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+
+                await PhotoManager.openSetting();
+              },
+              child: const Text('Settings'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<bool> _showDeleteConfirmation(BuildContext context, int count) async {
@@ -147,8 +484,7 @@ class _PhotoSectionState extends State<PhotoSection> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!viewModel.isSelectionMode &&
-                      (!viewModel.isCompleted || viewModel.hasSelectedAlbum))
+                  if (!viewModel.isSelectionMode)
                     _SelectAlbumButton(
                       title: viewModel.albumTitleText,
                       subtitle: viewModel.albumSubtitleText,
@@ -158,7 +494,7 @@ class _PhotoSectionState extends State<PhotoSection> {
                       onTap:
                           viewModel.canSelectAlbum &&
                               !viewModel.isSelectingAlbum
-                          ? viewModel.selectAlbum
+                          ? _showAlbumPicker
                           : null,
                     ),
 
@@ -204,7 +540,10 @@ class _PhotoSectionState extends State<PhotoSection> {
                       onRetry: viewModel.retry,
                     )
                   else if (!viewModel.hasPhotos)
-                    const _NoPhotosState()
+                    _NoPhotosState(
+                      isCompleted: viewModel.isCompleted,
+                      hasSelectedAlbum: viewModel.hasSelectedAlbum,
+                    )
                   else
                     _PhotoGroups(
                       groups: viewModel.photoGroups,
@@ -495,8 +834,7 @@ class _PhotoGroups extends StatelessWidget {
                   Expanded(
                     child: Text(
                       group.showDate
-                          ? '${group.dateText} · '
-                                '${group.locationName}'
+                          ? '${group.dateText} · ${group.locationName}'
                           : group.locationName,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
@@ -564,6 +902,34 @@ class _PhotoTile extends StatelessWidget {
 
   final VoidCallback onTap;
 
+  Widget _buildPhoto() {
+    if (photo.localFile != null) {
+      return Image.file(photo.localFile!, fit: BoxFit.cover);
+    }
+
+    if (photo.imageUrl != null && photo.imageUrl!.isNotEmpty) {
+      return Image.network(
+        photo.imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildErrorImage();
+        },
+      );
+    }
+
+    return _buildErrorImage();
+  }
+
+  Widget _buildErrorImage() {
+    return Container(
+      color: AppColors.bgAccent,
+      child: const Icon(
+        Icons.broken_image_outlined,
+        color: AppColors.textDisabled,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -573,21 +939,7 @@ class _PhotoTile extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              photo.imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: AppColors.bgAccent,
-                  child: const Icon(
-                    Icons.broken_image_outlined,
-                    color: AppColors.textDisabled,
-                  ),
-                );
-              },
-            ),
-
-            // รูปถูกเลือก
+            _buildPhoto(),
             if (isSelectionMode && isSelected)
               Container(color: Colors.black.withValues(alpha: 0.25)),
 
@@ -622,7 +974,7 @@ class _PhotoTile extends StatelessWidget {
               ),
 
             // Owner profile
-            if (photo.activityType != null && !isSelectionMode)
+            if (!isSelectionMode)
               Positioned(
                 right: 6,
                 bottom: 6,
@@ -660,10 +1012,27 @@ class _PhotoTile extends StatelessWidget {
 }
 
 class _NoPhotosState extends StatelessWidget {
-  const _NoPhotosState();
+  const _NoPhotosState({
+    required this.isCompleted,
+    required this.hasSelectedAlbum,
+  });
+
+  final bool isCompleted;
+  final bool hasSelectedAlbum;
 
   @override
   Widget build(BuildContext context) {
+    String title;
+    String message;
+
+    if (isCompleted && !hasSelectedAlbum) {
+      title = 'No trip photos available';
+      message = 'No photo album was selected before this trip was completed.';
+    } else {
+      title = 'No photos yet';
+      message = 'Photos will be imported automatically from your album.';
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Center(
@@ -678,9 +1047,9 @@ class _NoPhotosState extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            const Text(
-              'No photos yet',
-              style: TextStyle(
+            Text(
+              title,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textDisabled,
@@ -689,12 +1058,12 @@ class _NoPhotosState extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                'Photos will be imported automatically from your album.',
+                message,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.textDisabled,
                   height: 1.5,

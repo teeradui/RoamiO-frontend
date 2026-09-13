@@ -5,21 +5,66 @@ class TripPhoto {
     this.userId,
     required this.photoUrl,
     this.uploadedAt,
+    this.capturedAt,
+    this.locationName,
+    this.latitude,
+    this.longitude,
   });
 
   final String photoId;
   final String tripId;
   final String? userId;
   final String photoUrl;
+
   final DateTime? uploadedAt;
+  final DateTime? capturedAt;
+
+  final String? locationName;
+  final double? latitude;
+  final double? longitude;
 
   factory TripPhoto.fromJson(Map<String, dynamic> json) {
     return TripPhoto(
-      photoId: json['photoId']?.toString() ?? json['photo_id']?.toString() ?? '',
-      tripId: json['tripId']?.toString() ?? json['trip_id']?.toString() ?? '',
-      userId: json['userId']?.toString() ?? json['user_id']?.toString(),
-      photoUrl: json['photoUrl']?.toString() ?? json['photo_url']?.toString() ?? '',
-      uploadedAt: _parseDateTime(json['uploadedAt'] ?? json['uploaded_at']),
+      photoId:
+          json['photoId']?.toString() ??
+          json['photo_id']?.toString() ??
+          '',
+
+      tripId:
+          json['tripId']?.toString() ??
+          json['trip_id']?.toString() ??
+          '',
+
+      userId:
+          json['userId']?.toString() ??
+          json['user_id']?.toString(),
+
+      photoUrl:
+          json['photoUrl']?.toString() ??
+          json['photo_url']?.toString() ??
+          '',
+
+      uploadedAt: _parseDateTime(
+        json['uploadedAt'] ??
+        json['uploaded_at'],
+      ),
+
+      capturedAt: _parseDateTime(
+        json['capturedAt'] ??
+        json['captured_at'],
+      ),
+
+      locationName:
+          json['locationName']?.toString() ??
+          json['location_name']?.toString(),
+
+      latitude: _parseDouble(
+        json['latitude'],
+      ),
+
+      longitude: _parseDouble(
+        json['longitude'],
+      ),
     );
   }
 }

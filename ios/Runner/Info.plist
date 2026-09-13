@@ -113,5 +113,8 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save media so it can be shared to Instagram.</string>
 
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RoamiO needs access to your photo library so you can select a trip album.</string>
+
 </dict>
 </plist>

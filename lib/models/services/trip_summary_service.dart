@@ -7,10 +7,24 @@ class TripSummaryService {
   final TripSummaryRepository _repo;
 
   TripSummaryService({TripSummaryRepository? repository})
-      : _repo = repository ?? TripSummaryRepository();
+    : _repo = repository ?? TripSummaryRepository();
 
-  Future<TripPhoto> uploadPhoto(String tripId, File photo) {
-    return _repo.uploadPhoto(tripId, photo);
+  Future<TripPhoto> uploadPhoto(
+    String tripId,
+    File photo, {
+    DateTime? capturedAt,
+    String? locationName,
+    double? latitude,
+    double? longitude,
+  }) {
+    return _repo.uploadPhoto(
+      tripId,
+      photo,
+      capturedAt: capturedAt,
+      locationName: locationName,
+      latitude: latitude,
+      longitude: longitude,
+    );
   }
 
   Future<List<TripPhoto>> getPhotos(String tripId) {
@@ -25,12 +39,15 @@ class TripSummaryService {
     return _repo.getSummary(tripId);
   }
 
-  Future<ActivityGraphData> getActivityGraphData(String tripId, {String userId = '1'}) {
-  return _repo.getActivityGraphData(tripId, userId: userId);
+  Future<ActivityGraphData> getActivityGraphData(
+    String tripId, {
+    String userId = '1',
+  }) {
+    return _repo.getActivityGraphData(tripId, userId: userId);
   }
 
   Future<StoryData> getStoryData(String tripId, {String userId = '1'}) {
-  return _repo.getStoryData(tripId, userId: userId);
+    return _repo.getStoryData(tripId, userId: userId);
   }
 
   Future<ActivityGraphData> getActivityGraphDataByTrip(String tripId) {

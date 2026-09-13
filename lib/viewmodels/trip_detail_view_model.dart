@@ -57,6 +57,8 @@ class TripDetailViewModel extends ChangeNotifier {
   String startDate = "";
   String endDate = "";
   String startTime = "";
+  DateTime? tripStartDateTime;
+  DateTime? tripEndDateTime;
 
   // TODO: no backend endpoint currently computes trip travel distance.
   // Left at 0.0 until one exists.
@@ -140,6 +142,21 @@ class TripDetailViewModel extends ChangeNotifier {
       endDate = _formatDate(trip.endDate);
       startTime = _formatTime(trip.startTime);
       status = _fromModelStatus(trip.tripStatus);
+
+      final startDateLocal = trip.startDate?.toLocal();
+      final startTimeLocal = trip.startTime?.toLocal();
+
+      if (startDateLocal != null && startTimeLocal != null) {
+        tripStartDateTime = DateTime(
+          startDateLocal.year,
+          startDateLocal.month,
+          startDateLocal.day,
+          startTimeLocal.hour,
+          startTimeLocal.minute,
+        );
+      }
+
+      tripEndDateTime = trip.endDate?.toLocal();
 
       if (status == TripStatus.active) {
         _locationTrackingService.start(tripId, userId: _currentUserId);

@@ -11,6 +11,10 @@ PODS:
   - flutter_google_places_sdk_ios (0.0.3):
     - Flutter
     - GooglePlaces (~> 8.5.0)
+  - flutter_image_compress_common (1.0.0):
+    - Flutter
+    - SDWebImage
+    - SDWebImageWebPCoder
   - flutter_social_share_plus (1.0.0):
     - FBSDKCoreKit (~> 18.1)
     - FBSDKShareKit (~> 18.1)
@@ -35,20 +39,43 @@ PODS:
   - GooglePlaces (8.5.0)
   - image_picker_ios (0.0.1):
     - Flutter
+  - libwebp (1.6.0):
+    - libwebp/demux (= 1.6.0)
+    - libwebp/mux (= 1.6.0)
+    - libwebp/sharpyuv (= 1.6.0)
+    - libwebp/webp (= 1.6.0)
+  - libwebp/demux (1.6.0):
+    - libwebp/webp
+  - libwebp/mux (1.6.0):
+    - libwebp/demux
+  - libwebp/sharpyuv (1.6.0)
+  - libwebp/webp (1.6.0):
+    - libwebp/sharpyuv
   - package_info_plus (0.4.5):
     - Flutter
+  - photo_manager (3.12.0):
+    - Flutter
+    - FlutterMacOS
+  - SDWebImage (5.21.7):
+    - SDWebImage/Core (= 5.21.7)
+  - SDWebImage/Core (5.21.7)
+  - SDWebImageWebPCoder (0.15.0):
+    - libwebp (~> 1.0)
+    - SDWebImage/Core (~> 5.17)
   - widget_recorder_plus (1.0.2):
     - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_google_places_sdk_ios (from `.symlinks/plugins/flutter_google_places_sdk_ios/ios`)
+  - flutter_image_compress_common (from `.symlinks/plugins/flutter_image_compress_common/ios`)
   - flutter_social_share_plus (from `.symlinks/plugins/flutter_social_share_plus/ios`)
   - geocoding_darwin (from `.symlinks/plugins/geocoding_darwin/darwin`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
   - google_maps_flutter_ios (from `.symlinks/plugins/google_maps_flutter_ios/ios`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
+  - photo_manager (from `.symlinks/plugins/photo_manager/darwin`)
   - widget_recorder_plus (from `.symlinks/plugins/widget_recorder_plus/ios`)
 
 SPEC REPOS:
@@ -60,12 +87,17 @@ SPEC REPOS:
     - Google-Maps-iOS-Utils
     - GoogleMaps
     - GooglePlaces
+    - libwebp
+    - SDWebImage
+    - SDWebImageWebPCoder
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
   flutter_google_places_sdk_ios:
     :path: ".symlinks/plugins/flutter_google_places_sdk_ios/ios"
+  flutter_image_compress_common:
+    :path: ".symlinks/plugins/flutter_image_compress_common/ios"
   flutter_social_share_plus:
     :path: ".symlinks/plugins/flutter_social_share_plus/ios"
   geocoding_darwin:
@@ -78,6 +110,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/image_picker_ios/ios"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
+  photo_manager:
+    :path: ".symlinks/plugins/photo_manager/darwin"
   widget_recorder_plus:
     :path: ".symlinks/plugins/widget_recorder_plus/ios"
 
@@ -88,6 +122,7 @@ SPEC CHECKSUMS:
   FBSDKShareKit: b588264311416ed8d7eabe1333c552fc4b86aa48
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_google_places_sdk_ios: c2236643eea32395f32d1667651d796f4377996a
+  flutter_image_compress_common: 11d5dcfb36f4ded92320bfa896261813a073240e
   flutter_social_share_plus: 6a280ba322c3936468cf68d336da7f87b10f2a0b
   geocoding_darwin: 968545604e6896deeef55517d53a81b3b9801971
   geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
@@ -96,7 +131,11 @@ SPEC CHECKSUMS:
   GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
   GooglePlaces: 426efb69051e7b460e16300ba63598687d10fa1a
   image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
+  libwebp: af5937a13536ef73f3784d69cc342b98961acf33
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
+  photo_manager: c303e4476f6c220274119f0212a7753e45edd4a2
+  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
+  SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
   widget_recorder_plus: 49c4468e67a9343f699e106489affbf5538aef25
 
 PODFILE CHECKSUM: 53a6aebc29ccee84c41f92f409fc20cd4ca011f1

@@ -25,6 +25,8 @@ class TripDetailScreen extends StatefulWidget {
 class _TripDetailScreenState extends State<TripDetailScreen> {
   late final TripDetailViewModel viewModel;
 
+  final Map<TripDetailSection, Widget> _sectionCache = {};
+
   final PhotoSectionController photoSectionController =
       PhotoSectionController();
 
@@ -88,28 +90,41 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   }
 
   Widget _buildSelectedSection() {
-    switch (viewModel.selectedSection) {
-      case TripDetailSection.overview:
-        return OverviewSection(
-          tripId: widget.tripId,
-          tripStatus: viewModel.status,
-        );
-      case TripDetailSection.map:
-        return MapSection(tripId: widget.tripId, tripStatus: viewModel.status);
-      case TripDetailSection.activities:
-        return ActivitiesSection(tripId: widget.tripId);
-      case TripDetailSection.photo:
-        return PhotoSection(
-          tripId: widget.tripId,
-          tripStatus: viewModel.status,
-          controller: photoSectionController,
-        );
-      case TripDetailSection.member:
-        return MemberSection(
-          tripId: widget.tripId,
-          tripStatus: viewModel.status,
-        );
-    }
+    final section = viewModel.selectedSection;
+
+    return _sectionCache.putIfAbsent(section, () {
+      switch (section) {
+        case TripDetailSection.overview:
+          return OverviewSection(
+            tripId: widget.tripId,
+            tripStatus: viewModel.status,
+          );
+
+        case TripDetailSection.map:
+          return MapSection(
+            tripId: widget.tripId,
+            tripStatus: viewModel.status,
+          );
+
+        case TripDetailSection.activities:
+          return ActivitiesSection(tripId: widget.tripId);
+
+        case TripDetailSection.photo:
+          return PhotoSection(
+            tripId: widget.tripId,
+            tripStatus: viewModel.status,
+            controller: photoSectionController,
+            tripStartDateTime: viewModel.tripStartDateTime,
+            tripEndDateTime: viewModel.tripEndDateTime,
+          );
+
+        case TripDetailSection.member:
+          return MemberSection(
+            tripId: widget.tripId,
+            tripStatus: viewModel.status,
+          );
+      }
+    });
   }
 
   Future<bool> _showConfirmationDialog({

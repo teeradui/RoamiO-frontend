@@ -1,23 +1,34 @@
 import 'dart:io';
-
+import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 import 'package:roamio_frontend/models/services/trip_summary_service.dart';
+import 'package:roamio_frontend/models/services/photo_album_service.dart';
 
 class TripPhotoItem {
   const TripPhotoItem({
     required this.id,
-    required this.imageUrl,
     required this.capturedAt,
     required this.ownerUserId,
     required this.ownerUsername,
+    this.imageUrl,
+    this.localFile,
     this.ownerProfileImageUrl,
     this.locationName,
     this.activityType,
+    this.latitude,
+    this.longitude,
   });
 
   final String id;
-  final String imageUrl;
+
+  final String? imageUrl;
+  final File? localFile;
+
   final DateTime capturedAt;
 
   final String ownerUserId;
@@ -26,6 +37,9 @@ class TripPhotoItem {
 
   final String? locationName;
   final String? activityType;
+
+  final double? latitude;
+  final double? longitude;
 }
 
 class TripPhotoGroup {
@@ -48,28 +62,34 @@ class PhotoSectionViewModel extends ChangeNotifier {
   PhotoSectionViewModel({
     required this.tripId,
     required this.tripStatus,
+    required this.tripStartDateTime,
+    required this.tripEndDateTime,
     TripSummaryService? tripSummaryService,
-  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService() {
-    selectedAlbumName = _selectedAlbumCache[tripId] ?? '';
+    PhotoAlbumService? photoAlbumService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService(),
+       _photoAlbumService = photoAlbumService ?? PhotoAlbumService() {
+    selectedAlbumName = _selectedAlbumNameCache[tripId] ?? '';
+    selectedAlbumId = _selectedAlbumIdCache[tripId];
   }
 
   final TripSummaryService _tripSummaryService;
-
+  final PhotoAlbumService _photoAlbumService;
   final String tripId;
   final TripStatus tripStatus;
+  final DateTime? tripStartDateTime;
+  final DateTime? tripEndDateTime;
 
-  // =========================================================
-  // TEMP SESSION CACHE
-  //
-  // ป้องกันเลือก album แล้วพอสลับ section กลับมาต้องเลือกใหม่
-  //
-  // TODO:
-  // backend จริงควรเก็บ selected album ของ trip
-  // =========================================================
+  final Geocoding _geocoding = Geocoding();
 
-  static final Map<String, String> _selectedAlbumCache = {};
+  static final Map<String, String> _selectedAlbumNameCache = {};
+
+  static final Map<String, String> _selectedAlbumIdCache = {};
+
+  static final Map<String, Set<String>> _uploadedAssetIdsCache = {};
 
   String selectedAlbumName = '';
+
+  String? selectedAlbumId;
 
   List<TripPhotoItem> photos = [];
   List<TripPhotoGroup> photoGroups = [];
@@ -82,9 +102,7 @@ class PhotoSectionViewModel extends ChangeNotifier {
 
   bool _hasLoadedPhotos = false;
 
-  // =========================================================
-  // PHOTO SELECTION
-  // =========================================================
+  final Set<String> _uploadedLocalAssetIds = {};
 
   bool isSelectionMode = false;
 
@@ -98,6 +116,10 @@ class PhotoSectionViewModel extends ChangeNotifier {
 
   bool get areAllPhotosSelected =>
       photos.isNotEmpty && selectedPhotoIds.length == photos.length;
+
+  Set<String> get _uploadedAssetIds {
+    return _uploadedAssetIdsCache.putIfAbsent(tripId, () => <String>{});
+  }
 
   String get selectionTitle {
     switch (selectionAction) {
@@ -147,7 +169,10 @@ class PhotoSectionViewModel extends ChangeNotifier {
     return false;
   }
 
-  bool get hasSelectedAlbum => selectedAlbumName.trim().isNotEmpty;
+  bool get hasSelectedAlbum =>
+      selectedAlbumId != null &&
+      selectedAlbumId!.isNotEmpty &&
+      selectedAlbumName.trim().isNotEmpty;
 
   bool get hasPhotos => photos.isNotEmpty;
 
@@ -166,45 +191,225 @@ class PhotoSectionViewModel extends ChangeNotifier {
   }
 
   String get albumSubtitleText {
-  if (isUpcoming || isActive) {
-    if (hasSelectedAlbum) {
+    if (isUpcoming || isActive) {
+      if (hasSelectedAlbum) {
+        return 'Change album';
+      }
+
+      return 'Please select photo album before your trip start';
+    }
+    if (isCompleted && !hasSelectedAlbum) {
+      return 'No album was selected before this trip was completed';
+    }
+
+    if (isCompleted &&
+        hasSelectedAlbum &&
+        (!hasPhotos || errorMessage != null)) {
       return 'Change album';
     }
 
-    return 'Please select photo album before your trip start';
-  }
-  if (isCompleted && !hasSelectedAlbum) {
-    return 'No album was selected before this trip was completed';
+    return 'Album selection is unavailable after the trip is completed';
   }
 
-  if (isCompleted &&
-      hasSelectedAlbum &&
-      (!hasPhotos || errorMessage != null)) {
-    return 'Change album';
+  Future<File?> _preparePhotoForUpload(File sourceFile) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+
+      final targetPath =
+          '${tempDir.path}/'
+          'roamio_${DateTime.now().microsecondsSinceEpoch}.jpg';
+
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        sourceFile.absolute.path,
+        targetPath,
+        format: CompressFormat.jpeg,
+        quality: 90,
+        keepExif: true,
+      );
+
+      if (compressedFile == null) {
+        debugPrint('IMAGE CONVERSION FAILED: ${sourceFile.path}');
+
+        return null;
+      }
+
+      debugPrint('IMAGE READY FOR UPLOAD: ${compressedFile.path}');
+
+      return File(compressedFile.path);
+    } catch (error, stackTrace) {
+      debugPrint('PREPARE PHOTO FOR UPLOAD ERROR: $error');
+
+      debugPrintStack(stackTrace: stackTrace);
+
+      return null;
+    }
   }
 
-  return 'Album selection is unavailable after the trip is completed';
-}
+  Future<String?> _getLocationNameFromCoordinates(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final placemarks = await _geocoding.placemarkFromCoordinates(
+        latitude,
+        longitude,
+      );
+
+      if (placemarks.isEmpty) {
+        return null;
+      }
+
+      final place = placemarks.first;
+
+      if (place.name != null && place.name!.trim().isNotEmpty) {
+        return place.name;
+      }
+
+      if (place.subLocality != null && place.subLocality!.trim().isNotEmpty) {
+        return place.subLocality;
+      }
+
+      if (place.locality != null && place.locality!.trim().isNotEmpty) {
+        return place.locality;
+      }
+
+      return null;
+    } catch (error) {
+      debugPrint('REVERSE GEOCODING ERROR: $error');
+
+      return null;
+    }
+  }
+
+  Future<void> loadPhotosFromSelectedAlbum() async {
+    if (selectedAlbumId == null) {
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final assets = await _photoAlbumService.getPhotosFromAlbum(
+        selectedAlbumId!,
+      );
+
+      debugPrint('========== LOAD LOCAL ALBUM PHOTOS ==========');
+      debugPrint('Album: $selectedAlbumName');
+      debugPrint('Album ID: $selectedAlbumId');
+      debugPrint('All photos in album: ${assets.length}');
+      debugPrint('Trip start: $tripStartDateTime');
+      debugPrint('Trip end: $tripEndDateTime');
+      debugPrint('Trip status: $tripStatus');
+
+      final now = DateTime.now();
+      final filteredAssets = assets.where((asset) {
+        final capturedAt = asset.createDateTime.toLocal();
+
+        if (tripStartDateTime == null) {
+          return false;
+        }
+
+        final start = tripStartDateTime!.toLocal();
+
+        if (isActive) {
+          return !capturedAt.isBefore(start) && !capturedAt.isAfter(now);
+        }
+
+        if (isCompleted && tripEndDateTime != null) {
+          final end = tripEndDateTime!.toLocal();
+
+          return !capturedAt.isBefore(start) && !capturedAt.isAfter(end);
+        }
+
+        if (isUpcoming) {
+          return false;
+        }
+
+        return false;
+      }).toList();
+
+      debugPrint('Photos inside trip period: ${filteredAssets.length}');
+
+      final result = <TripPhotoItem>[];
+
+      for (final asset in filteredAssets) {
+        final file = await asset.file;
+
+        if (file == null) {
+          continue;
+        }
+
+        String? locationName;
+
+        final latitude = asset.latitude;
+        final longitude = asset.longitude;
+
+        if (latitude != null &&
+            longitude != null &&
+            latitude != 0 &&
+            longitude != 0) {
+          locationName = await _getLocationNameFromCoordinates(
+            latitude,
+            longitude,
+          );
+        }
+
+        result.add(
+          TripPhotoItem(
+            id: asset.id,
+            localFile: file,
+            capturedAt: asset.createDateTime.toLocal(),
+            ownerUserId: '',
+            ownerUsername: '',
+            locationName: locationName,
+            latitude: latitude,
+            longitude: longitude,
+          ),
+        );
+      }
+
+      debugPrint('Local files loaded: ${result.length}');
+
+      await _uploadTripPhotos(result);
+
+      await loadTripPhotos(forceRefresh: true);
+
+      debugPrint('============================================');
+    } catch (error, stackTrace) {
+      debugPrint('LOAD ALBUM PHOTOS ERROR: $error');
+
+      debugPrintStack(stackTrace: stackTrace);
+
+      _clearPhotos();
+
+      errorMessage = 'Unable to load trip photos. Please try again.';
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> initialize() async {
     debugPrint('========== INITIALIZE PHOTO SECTION ==========');
     debugPrint('Trip ID: $tripId');
     debugPrint('Status: $tripStatus');
-    debugPrint('Cached album: ${_selectedAlbumCache[tripId]}');
+    debugPrint(
+      'Cached album: '
+      '${_selectedAlbumNameCache[tripId]} '
+      '(${_selectedAlbumIdCache[tripId]})',
+    );
 
-    // Completed:
-    // ไม่ต้องเลือก album แล้ว โหลด summarized trip photos เลย
     if (isCompleted) {
       await loadTripPhotos();
       return;
     }
 
-    // Upcoming / Active:
-    // ถ้าเคยเลือก album แล้ว ให้โหลดรูปต่อทันที
     if (hasSelectedAlbum) {
       debugPrint('ALBUM ALREADY SELECTED → LOAD PHOTOS');
 
-      await loadTripPhotos();
+      await loadPhotosFromSelectedAlbum();
       return;
     }
 
@@ -215,12 +420,25 @@ class PhotoSectionViewModel extends ChangeNotifier {
   // SELECT ALBUM
   // =========================================================
 
-  Future<void> selectAlbum() async {
+  Future<List<DevicePhotoAlbum>> loadAvailableAlbums() async {
+    try {
+      return await _photoAlbumService.getAlbums();
+    } catch (error, stackTrace) {
+      debugPrint('LOAD DEVICE ALBUMS ERROR: $error');
+
+      debugPrintStack(stackTrace: stackTrace);
+
+      rethrow;
+    }
+  }
+
+  Future<void> selectAlbum(DevicePhotoAlbum album) async {
     if (!canSelectAlbum) {
       debugPrint(
         'SELECT ALBUM BLOCKED: '
         'trip status = $tripStatus',
       );
+
       return;
     }
 
@@ -228,36 +446,24 @@ class PhotoSectionViewModel extends ChangeNotifier {
       return;
     }
 
-    debugPrint('========== SELECT PHOTO ALBUM ==========');
-    debugPrint('Trip ID: $tripId');
-
     isSelectingAlbum = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      /*
-       * TEMP MOCK
-       *
-       * TODO:
-       * เปลี่ยนเป็น native album picker
-       */
+      selectedAlbumId = album.id;
+      selectedAlbumName = album.name;
 
-      await Future<void>.delayed(const Duration(milliseconds: 300));
+      _selectedAlbumIdCache[tripId] = album.id;
 
-      selectedAlbumName = 'My Trip Album';
-
-      // จำไว้ตาม trip
-      _selectedAlbumCache[tripId] = selectedAlbumName;
-
-      debugPrint('SELECTED ALBUM: $selectedAlbumName');
+      _selectedAlbumNameCache[tripId] = album.name;
 
       debugPrint(
-        'SAVED ALBUM CACHE: '
-        '${_selectedAlbumCache[tripId]}',
+        'SELECTED ALBUM: '
+        '${album.name} (${album.id})',
       );
 
-      await loadTripPhotos(forceRefresh: true);
+      await loadPhotosFromSelectedAlbum();
     } catch (error, stackTrace) {
       debugPrint('SELECT PHOTO ALBUM ERROR: $error');
 
@@ -267,8 +473,6 @@ class PhotoSectionViewModel extends ChangeNotifier {
     } finally {
       isSelectingAlbum = false;
       notifyListeners();
-
-      debugPrint('========================================');
     }
   }
 
@@ -302,18 +506,28 @@ class PhotoSectionViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-        try {
+    try {
       final fetchedPhotos = await _tripSummaryService.getPhotos(tripId);
 
       photos = fetchedPhotos.map((photo) {
         return TripPhotoItem(
           id: photo.photoId,
           imageUrl: photo.photoUrl,
-          capturedAt: photo.uploadedAt ?? DateTime.now(),
+
+          capturedAt:
+              photo.capturedAt?.toLocal() ??
+              photo.uploadedAt?.toLocal() ??
+              DateTime.now(),
+
           ownerUserId: photo.userId ?? '',
           ownerUsername: photo.userId ?? 'Unknown',
+
           ownerProfileImageUrl: null,
-          locationName: null,
+
+          locationName: photo.locationName,
+          latitude: photo.latitude,
+          longitude: photo.longitude,
+
           activityType: null,
         );
       }).toList();
@@ -442,27 +656,159 @@ class PhotoSectionViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> _uploadTripPhotos(List<TripPhotoItem> localPhotos) async {
+    debugPrint('========== UPLOAD TRIP PHOTOS ==========');
+
+    for (final photo in localPhotos) {
+      final sourceFile = photo.localFile;
+
+      if (sourceFile == null) {
+        continue;
+      }
+
+      if (_uploadedAssetIds.contains(photo.id)) {
+        debugPrint('SKIP ALREADY UPLOADED: ${photo.id}');
+        continue;
+      }
+
+      try {
+        final uploadFile = await _preparePhotoForUpload(sourceFile);
+
+        if (uploadFile == null) {
+          continue;
+        }
+
+        debugPrint('UPLOAD PHOTO: ${photo.id}');
+
+        await _tripSummaryService.uploadPhoto(
+          tripId,
+          uploadFile,
+          capturedAt: photo.capturedAt,
+          locationName: photo.locationName,
+          latitude: photo.latitude,
+          longitude: photo.longitude,
+        );
+
+        _uploadedAssetIds.add(photo.id);
+
+        debugPrint('UPLOAD SUCCESS: ${photo.id}');
+
+        if (await uploadFile.exists()) {
+          await uploadFile.delete();
+        }
+      } catch (error, stackTrace) {
+        debugPrint('UPLOAD ERROR (${photo.id}): $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+
+    debugPrint('========================================');
+  }
+
   Future<bool> _saveSelectedPhotos() async {
     try {
-      /*
-     * TEMP MOCK
-     *
-     * TODO:
-     * download/save selected photos
-     * to device gallery
-     */
+      final selectedPhotos = photos
+          .where((photo) => selectedPhotoIds.contains(photo.id))
+          .toList();
 
-      debugPrint('SAVING ${selectedPhotoIds.length} PHOTOS...');
+      if (selectedPhotos.isEmpty) {
+        return false;
+      }
 
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      debugPrint('SAVING ${selectedPhotos.length} PHOTOS...');
 
-      debugPrint('SAVE PHOTOS SUCCESS');
+      int savedCount = 0;
+
+      for (final photo in selectedPhotos) {
+        File? file = photo.localFile;
+
+        // ถ้าไม่มี local file แต่มี URL จาก backend
+        if (file == null &&
+            photo.imageUrl != null &&
+            photo.imageUrl!.trim().isNotEmpty) {
+          try {
+            final response = await http.get(Uri.parse(photo.imageUrl!));
+
+            if (response.statusCode != 200) {
+              debugPrint(
+                'DOWNLOAD FAILED: ${photo.id} '
+                'status=${response.statusCode}',
+              );
+              continue;
+            }
+
+            final tempDir = await getTemporaryDirectory();
+
+            final tempFile = File(
+              '${tempDir.path}/'
+              'roamio_download_${photo.id}.jpg',
+            );
+
+            await tempFile.writeAsBytes(response.bodyBytes);
+
+            file = tempFile;
+
+            debugPrint('DOWNLOADED PHOTO: ${photo.id}');
+          } catch (error) {
+            debugPrint(
+              'DOWNLOAD PHOTO ERROR '
+              '(${photo.id}): $error',
+            );
+            continue;
+          }
+        }
+
+        if (file == null) {
+          debugPrint(
+            'SKIP SAVE: ${photo.id} '
+            'has no local file or image URL',
+          );
+          continue;
+        }
+
+        if (!await file.exists()) {
+          debugPrint(
+            'SKIP SAVE: '
+            'file does not exist ${file.path}',
+          );
+          continue;
+        }
+
+        final extension = file.path.contains('.')
+            ? file.path.split('.').last
+            : 'jpg';
+
+        final result = await PhotoManager.editor.saveImageWithPath(
+          file.path,
+          title:
+              'roamio_'
+              '${DateTime.now().millisecondsSinceEpoch}_'
+              '$savedCount.$extension',
+          creationDate: photo.capturedAt,
+        );
+
+        debugPrint('SAVE RESULT: ${result.id}');
+
+        savedCount++;
+      }
+
+      debugPrint(
+        'SAVE PHOTOS SUCCESS: '
+        '$savedCount/${selectedPhotos.length}',
+      );
+
+      if (savedCount == 0) {
+        errorMessage = 'Unable to save photos. Please try again.';
+        notifyListeners();
+        return false;
+      }
 
       cancelSelection();
 
       return true;
     } catch (error, stackTrace) {
       debugPrint('SAVE PHOTOS ERROR: $error');
+
       debugPrintStack(stackTrace: stackTrace);
 
       errorMessage = 'Unable to save photos. Please try again.';
@@ -490,13 +836,21 @@ class PhotoSectionViewModel extends ChangeNotifier {
       notifyListeners();
 
       try {
+        debugPrint(
+          'DELETE REQUEST: '
+          'tripId=$tripId, photoId=$photoId',
+        );
+
         await _tripSummaryService.deletePhoto(tripId, photoId);
+
+        debugPrint('DELETE BACKEND SUCCESS: $photoId');
 
         photos = photos.where((photo) => photo.id != photoId).toList();
 
-        debugPrint('DELETED: $photoId');
+        debugPrint('DELETED FROM UI: $photoId');
       } catch (error, stackTrace) {
         debugPrint('DELETE PHOTO ERROR ($photoId): $error');
+
         debugPrintStack(stackTrace: stackTrace);
 
         failedIds.add(photoId);
@@ -511,7 +865,6 @@ class PhotoSectionViewModel extends ChangeNotifier {
           ? 'Unable to delete photos. Please try again.'
           : '${failedIds.length} of ${idsToDelete.length} photos could not be deleted.';
 
-      // Keep only the failed ones selected, so the user can retry just those.
       selectedPhotoIds
         ..clear()
         ..addAll(failedIds);
@@ -525,8 +878,11 @@ class PhotoSectionViewModel extends ChangeNotifier {
     }
 
     debugPrint('DELETE PHOTOS SUCCESS');
+    await loadTripPhotos(forceRefresh: true);
     debugPrint('Remaining photos: ${photos.length}');
     debugPrint('========================================');
+
+    
 
     cancelSelection();
 
@@ -617,6 +973,11 @@ class PhotoSectionViewModel extends ChangeNotifier {
   Future<void> retry() async {
     errorMessage = null;
     notifyListeners();
+
+    if ((isUpcoming || isActive) && hasSelectedAlbum) {
+      await loadPhotosFromSelectedAlbum();
+      return;
+    }
 
     await loadTripPhotos(forceRefresh: true);
   }
