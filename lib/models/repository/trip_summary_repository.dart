@@ -79,8 +79,38 @@ class TripSummaryRepository {
     return TripSummary.fromJson(decoded['summary'] as Map<String, dynamic>);
   }
 
-  Future<ActivityGraphData> getActivityGraphData(String tripId) async {
-    final uri = Uri.parse('${_base(tripId)}/activityGraph');
+  Future<ActivityGraphData> getActivityGraphData(String tripId, {String userId = '1'}) async {
+  final uri = Uri.parse('${_base(tripId)}/activityGraphUser?userId=$userId');
+  final headers = await AuthHeaders.build();
+  final response = await http.get(uri, headers: headers);
+
+  if (response.statusCode != 200) {
+    throw Exception(
+      'Failed to load activity graph data (${response.statusCode}): ${response.body}',
+    );
+  }
+
+  final decoded = jsonDecode(response.body);
+  return ActivityGraphData.fromJson(decoded['graphData'] as Map<String, dynamic>);
+}
+
+  Future<StoryData> getStoryData(String tripId, {String userId = '1'}) async {
+    final uri = Uri.parse('${_base(tripId)}/story?userId=$userId');
+    final headers = await AuthHeaders.build();
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load story data (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    return StoryData.fromJson(decoded['storyData'] as Map<String, dynamic>);
+  } 
+
+  Future<ActivityGraphData> getActivityGraphDataByTrip(String tripId) async {
+    final uri = Uri.parse('${_base(tripId)}/activityGraphTrip');
     final headers = await AuthHeaders.build();
     final response = await http.get(uri, headers: headers);
 
@@ -94,18 +124,15 @@ class TripSummaryRepository {
     return ActivityGraphData.fromJson(decoded['graphData'] as Map<String, dynamic>);
   }
 
-  Future<StoryData> getStoryData(String tripId) async {
-    final uri = Uri.parse('${_base(tripId)}/story');
+  Future<void> deletePhoto(String tripId, String photoId) async {
+    final uri = Uri.parse('${_base(tripId)}/photo/$photoId');
     final headers = await AuthHeaders.build();
-    final response = await http.get(uri, headers: headers);
+    final response = await http.delete(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(
-        'Failed to load story data (${response.statusCode}): ${response.body}',
+        'Failed to delete photo (${response.statusCode}): ${response.body}',
       );
     }
-
-    final decoded = jsonDecode(response.body);
-    return StoryData.fromJson(decoded['storyData'] as Map<String, dynamic>);
   }
 }

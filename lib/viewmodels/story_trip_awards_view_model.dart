@@ -10,6 +10,7 @@ enum TripAwardType {
   sightseeing,
   accommodation,
   transit,
+  other,
 }
 
 class _AwardMeta {
@@ -302,10 +303,17 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
       awards = fetchedAwards.map((award) {
         final meta = _awardMetaByName[award.awardName];
 
+        if (meta == null) {
+          debugPrint(
+            'AWARD NAME NOT RECOGNIZED: "${award.awardName}" '
+            '(no entry in _awardMetaByName — check for typo or new backend award)',
+          );
+        }
+
         return StoryTripAward(
           userId: award.userId ?? '',
           username: 'WIP (need to implement)',
-          type: meta?.type ?? TripAwardType.sightseeing,
+          type: meta?.type ?? TripAwardType.other,
           awardTitle: award.awardName,
           awardSubtitle: award.awardDescription ?? 'WIP (need to implement)',
           awardIcon: meta?.icon ?? Icons.emoji_events_rounded,
@@ -368,6 +376,9 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
 
       case TripAwardType.transit:
         return const Color(0xFF2D7DFB);
+
+      case TripAwardType.other:
+        return const Color(0xFF9E9E9E);
     }
   }
 
@@ -390,6 +401,9 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
 
       case TripAwardType.transit:
         return const Color(0x262D7DFB);
+
+      case TripAwardType.other:
+        return const Color(0x1F9E9E9E);
     }
   }
 }

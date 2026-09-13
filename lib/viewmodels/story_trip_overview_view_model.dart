@@ -36,7 +36,7 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final summary = await _tripSummaryService.getSummary(tripId);
+      final summary = await _tripSummaryService.getStoryData(tripId);
 
       final distinctLocations = summary.activities
           .map((a) => a.locationName)

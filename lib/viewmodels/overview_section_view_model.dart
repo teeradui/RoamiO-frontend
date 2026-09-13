@@ -198,7 +198,6 @@ class OverviewSectionViewModel extends ChangeNotifier {
     }
   }*/
 
-  //mock data
   Future<void> _loadCompletedFromBackend() async {
     isLoading = true;
     notifyListeners();
@@ -207,10 +206,12 @@ class OverviewSectionViewModel extends ChangeNotifier {
       final results = await Future.wait([
         _tripSummaryService.getSummary(tripId),
         _tripSummaryService.getActivityGraphData(tripId),
+        _tripSummaryService.getActivityGraphDataByTrip(tripId),
       ]);
 
       final summary = results[0] as TripSummary;
-      final graphData = results[1] as ActivityGraphData;
+      final myGraphData = results[1] as ActivityGraphData;
+      final groupGraphData = results[2] as ActivityGraphData;
 
       photosCount = summary.photos.length;
       activitiesCount = summary.activities.length;
@@ -234,31 +235,33 @@ class OverviewSectionViewModel extends ChangeNotifier {
           )
           .toList();
 
-      // Group activity-type tally, derived client-side from all trip activities.
-      final groupTally = <String, int>{};
-      for (final activity in summary.activities) {
-        final type = activity.activityType?.trim();
-        if (type == null || type.isEmpty) continue;
-        groupTally[type] = (groupTally[type] ?? 0) + 1;
-      }
-
-      activityTypes = groupTally.entries
+      activityTypes = groupGraphData.activityTypeCounts
           .map(
-            (entry) => OverviewActivityType(
-              label: entry.key,
-              count: entry.value,
-              bgColor: _getActivityBackgroundColor(entry.key),
-              textColor: _getActivityTextColor(entry.key),
+            (item) => OverviewActivityType(
+              label: item.activityType,
+              count: item.count,
+              bgColor: _getActivityBackgroundColor(item.activityType),
+              textColor: _getActivityTextColor(item.activityType),
             ),
           )
           .toList();
 
-      groupActivityStats = groupTally.entries
-          .map((entry) => OverviewRadarItem(label: entry.key, value: entry.value.toDouble()))
+      groupActivityStats = groupGraphData.activityTypeCounts
+          .map(
+            (item) => OverviewRadarItem(
+              label: item.activityType,
+              value: item.count.toDouble(),
+            ),
+          )
           .toList();
 
-      myActivityStats = graphData.activityTypeCounts
-          .map((item) => OverviewRadarItem(label: item.activityType, value: item.count.toDouble()))
+      myActivityStats = myGraphData.activityTypeCounts
+          .map(
+            (item) => OverviewRadarItem(
+              label: item.activityType,
+              value: item.count.toDouble(),
+            ),
+          )
           .toList();
 
       // WIP: no backend field yet for real trip distance/duration.
@@ -363,9 +366,6 @@ class OverviewSectionViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-//mock data 
-  
 
   void _clearData() {
     photosCount = 0;

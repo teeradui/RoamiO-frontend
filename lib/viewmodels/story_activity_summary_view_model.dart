@@ -117,7 +117,7 @@ class StoryActivitySummaryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final graphData = await _tripSummaryService.getActivityGraphData(tripId);
+      final graphData = await _tripSummaryService.getActivityGraphDataByTrip(tripId);
 
       activityStats = graphData.activityTypeCounts.map((item) {
         final type = _mapType(item.activityType);

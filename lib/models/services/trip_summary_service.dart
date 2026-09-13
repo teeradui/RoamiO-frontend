@@ -25,11 +25,19 @@ class TripSummaryService {
     return _repo.getSummary(tripId);
   }
 
-  Future<ActivityGraphData> getActivityGraphData(String tripId) {
-    return _repo.getActivityGraphData(tripId);
+  Future<ActivityGraphData> getActivityGraphData(String tripId, {String userId = '1'}) {
+  return _repo.getActivityGraphData(tripId, userId: userId);
   }
 
-  Future<StoryData> getStoryData(String tripId) {
-    return _repo.getStoryData(tripId);
+  Future<StoryData> getStoryData(String tripId, {String userId = '1'}) {
+  return _repo.getStoryData(tripId, userId: userId);
+  }
+
+  Future<ActivityGraphData> getActivityGraphDataByTrip(String tripId) {
+    return _repo.getActivityGraphDataByTrip(tripId);
+  }
+
+  Future<void> deletePhoto(String tripId, String photoId) {
+    return _repo.deletePhoto(tripId, photoId);
   }
 }

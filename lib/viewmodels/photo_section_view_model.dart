@@ -78,6 +78,7 @@ class PhotoSectionViewModel extends ChangeNotifier {
   bool isSelectingAlbum = false;
 
   String? errorMessage;
+  String? deletingPhotoId;
 
   bool _hasLoadedPhotos = false;
 
@@ -473,38 +474,63 @@ class PhotoSectionViewModel extends ChangeNotifier {
   }
 
   Future<bool> _deleteSelectedPhotos() async {
-    try {
-      /*
-     * TEMP MOCK
-     *
-     * TODO:
-     * delete selected photos through backend
-     */
+    final idsToDelete = List<String>.from(selectedPhotoIds);
 
-      debugPrint('DELETING ${selectedPhotoIds.length} PHOTOS...');
+    debugPrint('========== DELETE TRIP PHOTOS ==========');
+    debugPrint('Trip ID: $tripId');
+    debugPrint('Photo IDs: $idsToDelete');
 
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+    errorMessage = null;
+    notifyListeners();
 
-      photos.removeWhere((photo) => selectedPhotoIds.contains(photo.id));
+    final failedIds = <String>[];
 
-      _groupPhotos();
+    for (final photoId in idsToDelete) {
+      deletingPhotoId = photoId;
+      notifyListeners();
 
-      debugPrint('DELETE PHOTOS SUCCESS');
-      debugPrint('REMAINING PHOTOS: ${photos.length}');
+      try {
+        await _tripSummaryService.deletePhoto(tripId, photoId);
 
-      cancelSelection();
+        photos = photos.where((photo) => photo.id != photoId).toList();
 
-      return true;
-    } catch (error, stackTrace) {
-      debugPrint('DELETE PHOTOS ERROR: $error');
-      debugPrintStack(stackTrace: stackTrace);
+        debugPrint('DELETED: $photoId');
+      } catch (error, stackTrace) {
+        debugPrint('DELETE PHOTO ERROR ($photoId): $error');
+        debugPrintStack(stackTrace: stackTrace);
 
-      errorMessage = 'Unable to delete photos. Please try again.';
+        failedIds.add(photoId);
+      }
+    }
+
+    _groupPhotos();
+    deletingPhotoId = null;
+
+    if (failedIds.isNotEmpty) {
+      errorMessage = failedIds.length == idsToDelete.length
+          ? 'Unable to delete photos. Please try again.'
+          : '${failedIds.length} of ${idsToDelete.length} photos could not be deleted.';
+
+      // Keep only the failed ones selected, so the user can retry just those.
+      selectedPhotoIds
+        ..clear()
+        ..addAll(failedIds);
 
       notifyListeners();
 
+      debugPrint('DELETE PHOTOS PARTIAL/FAILED: $failedIds');
+      debugPrint('========================================');
+
       return false;
     }
+
+    debugPrint('DELETE PHOTOS SUCCESS');
+    debugPrint('Remaining photos: ${photos.length}');
+    debugPrint('========================================');
+
+    cancelSelection();
+
+    return true;
   }
 
   // =========================================================

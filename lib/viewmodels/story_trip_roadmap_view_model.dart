@@ -189,7 +189,7 @@ Future<void> _loadGoogleRoute() async {
     errorMessage = null;
 
     try {
-      final summary = await _tripSummaryService.getSummary(tripId);
+      final summary = await _tripSummaryService.getStoryData(tripId);
 
       final validStops = summary.stops
           .where((s) => s.latitude != null && s.longitude != null)
