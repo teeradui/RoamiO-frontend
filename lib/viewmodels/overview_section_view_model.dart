@@ -316,29 +316,44 @@ class OverviewSectionViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _overviewService.getTripOverview(tripId);
+      final summary = await _tripSummaryService.getSummary(tripId);
 
-      photosCount = response.photosCount;
-      placesCount = response.placesCount;
-      activitiesCount = response.activitiesCount;
+      photosCount = summary.photos.length;
+      activitiesCount = summary.activities.length;
 
-      places = response.places
+      final distinctLocations = summary.activities
+          .map((a) => a.locationName)
+          .where((name) => name != null && name.trim().isNotEmpty)
+          .toSet();
+      placesCount = distinctLocations.length;
+
+      places = summary.activities
+          .where((a) => a.locationName != null && a.locationName!.trim().isNotEmpty)
           .map(
-            (place) => OverviewPlace(
-              name: place.name,
-              type: place.type,
-              timeText: _formatTime(place.timeText),
+            (a) => OverviewPlace(
+              name: a.locationName!,
+              type: a.locationType ?? 'WIP (need to implement)',
+              timeText: a.startTime != null
+                  ? _formatTime(a.startTime!.toIso8601String())
+                  : 'WIP (need to implement)',
             ),
           )
           .toList();
 
-      activityTypes = response.activityTypes
+      final tally = <String, int>{};
+      for (final activity in summary.activities) {
+        final type = activity.activityType?.trim();
+        if (type == null || type.isEmpty) continue;
+        tally[type] = (tally[type] ?? 0) + 1;
+      }
+
+      activityTypes = tally.entries
           .map(
-            (activity) => OverviewActivityType(
-              label: activity.label,
-              count: activity.count,
-              bgColor: _getActivityBackgroundColor(activity.label),
-              textColor: _getActivityTextColor(activity.label),
+            (entry) => OverviewActivityType(
+              label: entry.key,
+              count: entry.value,
+              bgColor: _getActivityBackgroundColor(entry.key),
+              textColor: _getActivityTextColor(entry.key),
             ),
           )
           .toList();
