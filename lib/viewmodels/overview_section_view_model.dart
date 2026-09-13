@@ -198,6 +198,43 @@ class OverviewSectionViewModel extends ChangeNotifier {
     }
   }*/
 
+  String _calculateTotalDuration(List<TripStop> stops) {
+    final timestamps = <DateTime>[];
+
+    for (final stop in stops) {
+      if (stop.enteredAt != null) timestamps.add(stop.enteredAt!);
+      if (stop.exitedAt != null) timestamps.add(stop.exitedAt!);
+    }
+
+    if (timestamps.isEmpty) {
+      return 'WIP (need to implement)';
+    }
+
+    timestamps.sort();
+
+    final first = timestamps.first;
+    final last = timestamps.last;
+    final duration = last.difference(first);
+
+    if (duration.isNegative || duration == Duration.zero) {
+      return 'WIP (need to implement)';
+    }
+
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+
+    if (days > 0 && hours > 0) {
+      return '$days day${days == 1 ? '' : 's'} $hours hr${hours == 1 ? '' : 's'}';
+    } else if (days > 0) {
+      return '$days day${days == 1 ? '' : 's'}';
+    } else if (hours > 0) {
+      return '$hours hr${hours == 1 ? '' : 's'}';
+    } else {
+      final minutes = duration.inMinutes;
+      return '$minutes min${minutes == 1 ? '' : 's'}';
+    }
+  }
+
   Future<void> _loadCompletedFromBackend() async {
     isLoading = true;
     notifyListeners();
@@ -266,7 +303,7 @@ class OverviewSectionViewModel extends ChangeNotifier {
 
       // WIP: no backend field yet for real trip distance/duration.
       totalDistanceKm = 0;
-      totalDurationText = 'WIP (need to implement)';
+      totalDurationText = _calculateTotalDuration(summary.stops);
     } on SocketException {
       _clearData();
       errorMessage = 'Request failed. Please check your connection.';

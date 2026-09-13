@@ -719,7 +719,7 @@ class _RadarSummaryCard extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          if (data.isEmpty)
+          if (data.length < 3)
             SizedBox(
               height: 150,
               child: Center(
@@ -736,7 +736,8 @@ class _RadarSummaryCard extends StatelessWidget {
           else
             SizedBox(
               height: 250,
-              child: RadarChart(
+              child:
+               RadarChart(
                 RadarChartData(
                   radarShape: RadarShape.polygon,
                   tickCount: 4,

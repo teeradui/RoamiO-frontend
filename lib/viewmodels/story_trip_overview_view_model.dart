@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/models/services/trip_summary_service.dart';
+import 'package:roamio_frontend/models/trip_summary_model.dart';
 
 class StoryTripOverviewStat {
   final String label;
@@ -27,6 +28,43 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
 
   List<StoryTripOverviewStat> stats = [];
 
+  String _calculateTotalDuration(List<TripStop> stops) {
+    final timestamps = <DateTime>[];
+
+    for (final stop in stops) {
+      if (stop.enteredAt != null) timestamps.add(stop.enteredAt!);
+      if (stop.exitedAt != null) timestamps.add(stop.exitedAt!);
+    }
+
+    if (timestamps.isEmpty) {
+      return 'WIP (need to implement)';
+    }
+
+    timestamps.sort();
+
+    final first = timestamps.first;
+    final last = timestamps.last;
+    final duration = last.difference(first);
+
+    if (duration.isNegative || duration == Duration.zero) {
+      return 'WIP (need to implement)';
+    }
+
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+
+    if (days > 0 && hours > 0) {
+      return '$days day${days == 1 ? '' : 's'} $hours hr${hours == 1 ? '' : 's'}';
+    } else if (days > 0) {
+      return '$days day${days == 1 ? '' : 's'}';
+    } else if (hours > 0) {
+      return '$hours hr${hours == 1 ? '' : 's'}';
+    } else {
+      final minutes = duration.inMinutes;
+      return '$minutes min${minutes == 1 ? '' : 's'}';
+    }
+  }
+
   Future<void> loadTripOverview() async {
     debugPrint('========== LOAD STORY TRIP OVERVIEW ==========');
     debugPrint('Trip ID: $tripId');
@@ -46,9 +84,9 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
       // WIP (need to implement): no trip date range or distance calc
       // exists server-side yet.
       stats = [
-        const StoryTripOverviewStat(
+        StoryTripOverviewStat(
           label: 'Days',
-          value: 'WIP (need to implement)',
+          value: _calculateTotalDuration(summary.stops),
           icon: Icons.calendar_month_rounded,
         ),
         StoryTripOverviewStat(

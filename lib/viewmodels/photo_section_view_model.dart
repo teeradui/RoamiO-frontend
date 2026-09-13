@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 import 'package:roamio_frontend/models/services/trip_summary_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:roamio_frontend/models/services/photo_album_service.dart';
 
 class TripPhotoItem {
@@ -211,6 +212,39 @@ class PhotoSectionViewModel extends ChangeNotifier {
     return 'Album selection is unavailable after the trip is completed';
   }
 
+  String get _albumIdKey => 'trip_${tripId}_selected_album_id';
+
+  String get _albumNameKey => 'trip_${tripId}_selected_album_name';
+
+  Future<void> _saveSelectedAlbum() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (selectedAlbumId != null && selectedAlbumId!.isNotEmpty) {
+      await prefs.setString(_albumIdKey, selectedAlbumId!);
+    }
+
+    if (selectedAlbumName.isNotEmpty) {
+      await prefs.setString(_albumNameKey, selectedAlbumName);
+    }
+
+    debugPrint(
+      'SAVED ALBUM TO PREFS: '
+      '$selectedAlbumName ($selectedAlbumId)',
+    );
+  }
+
+  Future<void> _loadSelectedAlbum() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    selectedAlbumId = prefs.getString(_albumIdKey);
+    selectedAlbumName = prefs.getString(_albumNameKey) ?? '';
+
+    debugPrint(
+      'RESTORED ALBUM: '
+      '$selectedAlbumName ($selectedAlbumId)',
+    );
+  }
+
   Future<File?> _preparePhotoForUpload(File sourceFile) async {
     try {
       final tempDir = await getTemporaryDirectory();
@@ -393,23 +427,26 @@ class PhotoSectionViewModel extends ChangeNotifier {
 
   Future<void> initialize() async {
     debugPrint('========== INITIALIZE PHOTO SECTION ==========');
+
     debugPrint('Trip ID: $tripId');
     debugPrint('Status: $tripStatus');
+
+    await _loadSelectedAlbum();
+
     debugPrint(
-      'Cached album: '
-      '${_selectedAlbumNameCache[tripId]} '
-      '(${_selectedAlbumIdCache[tripId]})',
+      'Saved album: '
+      '$selectedAlbumName ($selectedAlbumId)',
     );
 
+    await loadTripPhotos(forceRefresh: true);
+
     if (isCompleted) {
-      await loadTripPhotos();
       return;
     }
 
     if (hasSelectedAlbum) {
-      debugPrint('ALBUM ALREADY SELECTED → LOAD PHOTOS');
-
-      await loadPhotosFromSelectedAlbum();
+      debugPrint('ALBUM ALREADY SELECTED: $selectedAlbumName');
+      //await loadPhotosFromSelectedAlbum();
       return;
     }
 
@@ -434,11 +471,6 @@ class PhotoSectionViewModel extends ChangeNotifier {
 
   Future<void> selectAlbum(DevicePhotoAlbum album) async {
     if (!canSelectAlbum) {
-      debugPrint(
-        'SELECT ALBUM BLOCKED: '
-        'trip status = $tripStatus',
-      );
-
       return;
     }
 
@@ -455,18 +487,16 @@ class PhotoSectionViewModel extends ChangeNotifier {
       selectedAlbumName = album.name;
 
       _selectedAlbumIdCache[tripId] = album.id;
-
       _selectedAlbumNameCache[tripId] = album.name;
 
-      debugPrint(
-        'SELECTED ALBUM: '
-        '${album.name} (${album.id})',
-      );
+      // ต้องมีบรรทัดนี้
+      await _saveSelectedAlbum();
+
+      debugPrint('SELECTED ALBUM: ${album.name} (${album.id})');
 
       await loadPhotosFromSelectedAlbum();
     } catch (error, stackTrace) {
       debugPrint('SELECT PHOTO ALBUM ERROR: $error');
-
       debugPrintStack(stackTrace: stackTrace);
 
       errorMessage = 'Unable to load trip photos. Please try again.';
@@ -483,17 +513,6 @@ class PhotoSectionViewModel extends ChangeNotifier {
   Future<void> loadTripPhotos({bool forceRefresh = false}) async {
     if (_hasLoadedPhotos && !forceRefresh) {
       debugPrint('LOAD PHOTOS SKIPPED: already loaded');
-      return;
-    }
-
-    if (!isCompleted && !hasSelectedAlbum) {
-      debugPrint(
-        'LOAD PHOTOS SKIPPED: '
-        'no album selected',
-      );
-
-      _clearPhotos();
-      notifyListeners();
       return;
     }
 
@@ -881,8 +900,6 @@ class PhotoSectionViewModel extends ChangeNotifier {
     await loadTripPhotos(forceRefresh: true);
     debugPrint('Remaining photos: ${photos.length}');
     debugPrint('========================================');
-
-    
 
     cancelSelection();
 
