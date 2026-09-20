@@ -315,7 +315,7 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
           username: 'WIP (need to implement)',
           type: meta?.type ?? TripAwardType.other,
           awardTitle: award.awardName,
-          awardSubtitle: award.awardDescription ?? 'WIP (need to implement)',
+          awardSubtitle: award.awardDescription,
           awardIcon: meta?.icon ?? Icons.emoji_events_rounded,
           isCurrentUser: award.userId == '1',
         );

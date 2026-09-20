@@ -223,7 +223,7 @@ class _MapSectionState extends State<MapSection> {
                 onMapCreated: (controller) {
                   mapController = controller;
                 },
-                markers: markers,
+                markers: viewModel.visitedPlaceMarkers,
                 polylines: viewModel.routePolylines,
                 zoomControlsEnabled: true,
                 myLocationButtonEnabled: false,

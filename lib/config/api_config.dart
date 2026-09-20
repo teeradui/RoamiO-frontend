@@ -1,5 +1,5 @@
 class ApiConfig {
-  static const String baseUrl = 'http://10.121.97.243:3000/api';
+  static const String baseUrl = 'http://10.121.99.101:3000/api';
   static const String trips = '$baseUrl/trips';
   static String tripMembers(String tripId) => '$trips/$tripId/members';
   static String tripInvites(String tripId) => '$trips/$tripId/invites';

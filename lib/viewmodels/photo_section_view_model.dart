@@ -426,32 +426,51 @@ class PhotoSectionViewModel extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
-    debugPrint('========== INITIALIZE PHOTO SECTION ==========');
+  debugPrint(
+    '========== INITIALIZE PHOTO SECTION ==========',
+  );
 
-    debugPrint('Trip ID: $tripId');
-    debugPrint('Status: $tripStatus');
+  debugPrint('Trip ID: $tripId');
+  debugPrint('Status: $tripStatus');
 
-    await _loadSelectedAlbum();
+  // โหลด album ที่เคยเลือก
+  await _loadSelectedAlbum();
 
+  debugPrint(
+    'Saved album: '
+    '$selectedAlbumName ($selectedAlbumId)',
+  );
+
+  await loadTripPhotos(
+    forceRefresh: true,
+  );
+
+  if (isCompleted) {
+    return;
+  }
+
+  if (isActive && hasSelectedAlbum) {
     debugPrint(
-      'Saved album: '
-      '$selectedAlbumName ($selectedAlbumId)',
+      'ACTIVE TRIP + SAVED ALBUM '
+      '→ SYNC LOCAL PHOTOS',
     );
 
-    await loadTripPhotos(forceRefresh: true);
+    await loadPhotosFromSelectedAlbum();
 
-    if (isCompleted) {
-      return;
-    }
-
-    if (hasSelectedAlbum) {
-      debugPrint('ALBUM ALREADY SELECTED: $selectedAlbumName');
-      //await loadPhotosFromSelectedAlbum();
-      return;
-    }
-
-    debugPrint('NO ALBUM SELECTED YET');
+    return;
   }
+
+  if (isUpcoming && hasSelectedAlbum) {
+    debugPrint(
+      'UPCOMING TRIP + SAVED ALBUM '
+      '→ WAIT UNTIL ACTIVE',
+    );
+
+    return;
+  }
+
+  debugPrint('NO ALBUM SELECTED YET');
+}
 
   // =========================================================
   // SELECT ALBUM

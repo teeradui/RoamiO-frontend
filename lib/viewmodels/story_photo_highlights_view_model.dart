@@ -158,7 +158,7 @@ class StoryPhotoHighlightsViewModel extends ChangeNotifier {
             (photo) => StoryHighlightPhoto(
               id: photo.photoId,
               imageUrl: photo.photoUrl,
-              locationName: 'WIP (need to implement)',
+              locationName: photo.locationName ?? 'WIP (need to implement)',
               capturedAt: photo.uploadedAt ?? DateTime.now(),
               ownerUsername: photo.userId ?? 'WIP (need to implement)',
             ),

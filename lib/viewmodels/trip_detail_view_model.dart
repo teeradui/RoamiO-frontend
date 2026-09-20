@@ -5,6 +5,9 @@ import 'package:roamio_frontend/models/services/trip_service.dart';
 import 'package:roamio_frontend/models/services/trip_member_service.dart';
 import 'package:roamio_frontend/models/services/location_tracking_service.dart';
 import 'package:roamio_frontend/models/trip_model.dart' as trip_model;
+import 'dart:math' as math;
+import 'package:roamio_frontend/models/services/trip_summary_service.dart';
+import 'package:roamio_frontend/models/trip_summary_model.dart';
 
 enum TripStatus { upcoming, active, completed }
 
@@ -33,14 +36,89 @@ class TripDetailViewModel extends ChangeNotifier {
   final TripService _tripService;
   final TripMemberService _tripMemberService;
   final LocationTrackingService _locationTrackingService;
+  final TripSummaryService _tripSummaryService;
+
+  double _calculateDistanceBetweenPoints(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const earthRadiusKm = 6371.0;
+
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLon = (lon2 - lon1) * math.pi / 180;
+
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) *
+            math.cos(lat2 * math.pi / 180) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    final c = 2 * math.atan2(
+      math.sqrt(a),
+      math.sqrt(1 - a),
+    );
+
+    return earthRadiusKm * c;
+  }
+
+  double _calculateTotalDistance(List<TripStop> stops) {
+    // Only use stops that have valid coordinates and an entry time.
+    final validStops = stops
+        .where(
+          (stop) =>
+              stop.latitude != null &&
+              stop.longitude != null &&
+              stop.enteredAt != null,
+        )
+        .toList();
+
+    if (validStops.length < 2) {
+      return 0;
+    }
+
+    // Make sure stops are chronological.
+    validStops.sort(
+      (a, b) => a.enteredAt!.compareTo(b.enteredAt!),
+    );
+
+    double totalDistance = 0;
+
+    for (int i = 0; i < validStops.length - 1; i++) {
+      final current = validStops[i];
+      final next = validStops[i + 1];
+
+      totalDistance += _calculateDistanceBetweenPoints(
+        current.latitude!,
+        current.longitude!,
+        next.latitude!,
+        next.longitude!,
+      );
+    }
+
+    return totalDistance;
+  }
+
+  String _formatDistance(double distanceKm) {
+    if (distanceKm < 1) {
+      return '${(distanceKm * 1000).round()} m';
+    }
+
+    return '${distanceKm.toStringAsFixed(1)} km';
+  }
+
 
   TripDetailViewModel({
     required this.tripId,
     TripService? tripService,
     TripMemberService? tripMemberService,
     LocationTrackingService? locationTrackingService,
+    TripSummaryService? tripSummaryService,
   }) : _tripService = tripService ?? TripService(),
        _tripMemberService = tripMemberService ?? TripMemberService(),
+       _tripSummaryService = tripSummaryService ?? TripSummaryService(),
        // Defaults to the app-wide singleton — see LocationTrackingService's
        // class doc for why this can't be a fresh instance per screen.
        _locationTrackingService =
@@ -128,10 +206,12 @@ class TripDetailViewModel extends ChangeNotifier {
       final results = await Future.wait([
         _tripService.getTripById(tripId, forceRefresh: forceRefresh),
         _tripMemberService.getMembersByTrip(tripId, forceRefresh: forceRefresh),
+        _tripSummaryService.getSummary(tripId),
       ]);
 
       final trip = results[0] as trip_model.Trip;
       final fetchedMembers = results[1] as List;
+      final summary = results[2] as TripSummary;
 
       tripName = trip.tripName;
       destination = trip.tripDestination ?? '';
@@ -142,6 +222,7 @@ class TripDetailViewModel extends ChangeNotifier {
       endDate = _formatDate(trip.endDate);
       startTime = _formatTime(trip.startTime);
       status = _fromModelStatus(trip.tripStatus);
+      distanceKm = _calculateTotalDistance(summary.stops);
 
       final startDateLocal = trip.startDate?.toLocal();
       final startTimeLocal = trip.startTime?.toLocal();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 import 'package:roamio_frontend/models/trip_summary_model.dart';
 
@@ -29,32 +30,42 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
   List<StoryTripOverviewStat> stats = [];
 
   String _calculateTotalDuration(List<TripStop> stops) {
-    final timestamps = <DateTime>[];
+    final enteredTimes = stops
+        .map((stop) => stop.enteredAt)
+        .whereType<DateTime>()
+        .toList();
 
-    for (final stop in stops) {
-      if (stop.enteredAt != null) timestamps.add(stop.enteredAt!);
-      if (stop.exitedAt != null) timestamps.add(stop.exitedAt!);
+    final exitedTimes = stops
+        .map((stop) => stop.exitedAt)
+        .whereType<DateTime>()
+        .toList();
+
+    if (enteredTimes.isEmpty || exitedTimes.isEmpty) {
+      return 'N/A';
     }
 
-    if (timestamps.isEmpty) {
-      return 'WIP (need to implement)';
+    enteredTimes.sort();
+    exitedTimes.sort();
+
+    final firstEntered = enteredTimes.first;
+    final lastExited = exitedTimes.last;
+
+    final duration = lastExited.difference(firstEntered);
+
+    if (duration.isNegative) {
+      return 'N/A';
     }
 
-    timestamps.sort();
-
-    final first = timestamps.first;
-    final last = timestamps.last;
-    final duration = last.difference(first);
-
-    if (duration.isNegative || duration == Duration.zero) {
-      return 'WIP (need to implement)';
+    if (duration == Duration.zero) {
+      return '0 min';
     }
 
     final days = duration.inDays;
     final hours = duration.inHours % 24;
 
     if (days > 0 && hours > 0) {
-      return '$days day${days == 1 ? '' : 's'} $hours hr${hours == 1 ? '' : 's'}';
+      return '$days day${days == 1 ? '' : 's'} '
+          '$hours hr${hours == 1 ? '' : 's'}';
     } else if (days > 0) {
       return '$days day${days == 1 ? '' : 's'}';
     } else if (hours > 0) {
@@ -63,6 +74,77 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
       final minutes = duration.inMinutes;
       return '$minutes min${minutes == 1 ? '' : 's'}';
     }
+  }
+
+  double _calculateDistanceBetweenPoints(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const earthRadiusKm = 6371.0;
+
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLon = (lon2 - lon1) * math.pi / 180;
+
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) *
+            math.cos(lat2 * math.pi / 180) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    final c = 2 * math.atan2(
+      math.sqrt(a),
+      math.sqrt(1 - a),
+    );
+
+    return earthRadiusKm * c;
+  }
+
+  double _calculateTotalDistance(List<TripStop> stops) {
+    // Only use stops that have valid coordinates and an entry time.
+    final validStops = stops
+        .where(
+          (stop) =>
+              stop.latitude != null &&
+              stop.longitude != null &&
+              stop.enteredAt != null,
+        )
+        .toList();
+
+    if (validStops.length < 2) {
+      return 0;
+    }
+
+    // Make sure stops are chronological.
+    validStops.sort(
+      (a, b) => a.enteredAt!.compareTo(b.enteredAt!),
+    );
+
+    double totalDistance = 0;
+
+    for (int i = 0; i < validStops.length - 1; i++) {
+      final current = validStops[i];
+      final next = validStops[i + 1];
+
+      totalDistance += _calculateDistanceBetweenPoints(
+        current.latitude!,
+        current.longitude!,
+        next.latitude!,
+        next.longitude!,
+      );
+    }
+
+    return totalDistance;
+  }
+
+  String _formatDistance(double distanceKm) {
+    if (distanceKm < 1) {
+      return '${(distanceKm * 1000).round()} m';
+    }
+
+    return '${distanceKm.toStringAsFixed(1)} km';
   }
 
   Future<void> loadTripOverview() async {
@@ -81,8 +163,7 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
           .where((name) => name != null && name.trim().isNotEmpty)
           .toSet();
 
-      // WIP (need to implement): no trip date range or distance calc
-      // exists server-side yet.
+      final totalDistance = _calculateTotalDistance(summary.stops);
       stats = [
         StoryTripOverviewStat(
           label: 'Days',
@@ -94,9 +175,9 @@ class StoryTripOverviewViewModel extends ChangeNotifier {
           value: '${distinctLocations.length}',
           icon: Icons.location_on_rounded,
         ),
-        const StoryTripOverviewStat(
+        StoryTripOverviewStat(
           label: 'Distance',
-          value: 'WIP (need to implement)',
+          value: _formatDistance(totalDistance),
           icon: Icons.route_rounded,
         ),
         StoryTripOverviewStat(

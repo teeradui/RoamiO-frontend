@@ -382,7 +382,7 @@ Future<void> _loadGoogleRoute() async {
 
         notifyListeners();
 
-        await Future<void>.delayed(const Duration(milliseconds: 35));
+        await Future<void>.delayed(const Duration(milliseconds: 5));
       }
 
       carPosition = nextStopData.location;

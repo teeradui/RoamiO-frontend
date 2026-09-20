@@ -310,13 +310,29 @@ class _StoryMyActivityStatsSlideState extends State<StoryMyActivityStatsSlide>
 }
 
 class _MyActivityRadarCard extends StatelessWidget {
-  const _MyActivityRadarCard({required this.data, required this.animation});
+  const _MyActivityRadarCard({
+    required this.data,
+    required this.animation,
+  });
 
   final List<OverviewRadarItem> data;
   final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
+    final radarData = List<OverviewRadarItem>.from(data);
+
+    // fl_chart ต้องมีอย่างน้อย 3 จุด
+    // ถ้ามี activity จริง 2 อัน ให้เติมจุดเปล่า 1 จุด
+    if (radarData.length == 2) {
+      radarData.add(
+        OverviewRadarItem(
+          label: '',
+          value: 0,
+        ),
+      );
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
@@ -339,7 +355,9 @@ class _MyActivityRadarCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.btnPrimary.withValues(alpha: 0.12),
+                  color: AppColors.btnPrimary.withValues(
+                    alpha: 0.12,
+                  ),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -382,90 +400,122 @@ class _MyActivityRadarCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          SizedBox(
-            height: 240,
-            child: AnimatedBuilder(
-              animation: animation,
-              builder: (context, _) {
-                final progress = animation.value;
+          if (data.length < 2)
+            const SizedBox(
+              height: 150,
+              child: Center(
+                child: Text(
+                  'Trip summary is not available.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 240,
+              child: AnimatedBuilder(
+                animation: animation,
+                builder: (context, _) {
+                  final progress = animation.value;
 
-                final maxValue = data.isEmpty
-                    ? 1.0
-                    : data
-                          .map((item) => item.value)
-                          .reduce((a, b) => a > b ? a : b)
-                          .toDouble();
+                  final maxValue = radarData
+                      .map((item) => item.value)
+                      .reduce(
+                        (a, b) => a > b ? a : b,
+                      )
+                      .toDouble();
 
-                return RadarChart(
-                  RadarChartData(
-                    radarShape: RadarShape.polygon,
-                    tickCount: 4,
+                  return RadarChart(
+                    RadarChartData(
+                      radarShape: RadarShape.polygon,
+                      tickCount: 4,
 
-                    ticksTextStyle: const TextStyle(
-                      color: Colors.transparent,
-                      fontSize: 0,
-                    ),
-
-                    getTitle: (index, angle) {
-                      return RadarChartTitle(
-                        text: data[index].label,
-                        angle: angle,
-                      );
-                    },
-
-                    dataSets: [
-                      RadarDataSet(
-                        dataEntries: data.map((_) {
-                          return RadarEntry(value: maxValue);
-                        }).toList(),
-
-                        borderColor: Colors.transparent,
-                        fillColor: Colors.transparent,
-                        borderWidth: 0,
-                        entryRadius: 0,
+                      ticksTextStyle: const TextStyle(
+                        color: Colors.transparent,
+                        fontSize: 0,
                       ),
 
-                     
-                      RadarDataSet(
-                        dataEntries: data.map((item) {
-                          return RadarEntry(value: item.value * progress);
-                        }).toList(),
+                      getTitle: (index, angle) {
+                        return RadarChartTitle(
+                          text: radarData[index].label,
+                          angle: angle,
+                        );
+                      },
 
-                        borderColor: AppColors.btnPrimary,
+                      dataSets: [
+                        // Dataset โปร่งใสสำหรับล็อก scale
+                        RadarDataSet(
+                          dataEntries: radarData.map((_) {
+                            return RadarEntry(
+                              value: maxValue,
+                            );
+                          }).toList(),
 
-                        fillColor: AppColors.btnPrimary.withValues(
-                          alpha: 0.14 * progress,
+                          borderColor: Colors.transparent,
+                          fillColor: Colors.transparent,
+                          borderWidth: 0,
+                          entryRadius: 0,
                         ),
 
-                        borderWidth: 2.5,
-                        entryRadius: 3 * progress,
+                        // Dataset จริง + animation
+                        RadarDataSet(
+                          dataEntries: radarData.map((item) {
+                            return RadarEntry(
+                              value: item.value * progress,
+                            );
+                          }).toList(),
+
+                          borderColor: AppColors.btnPrimary,
+
+                          fillColor:
+                              AppColors.btnPrimary.withValues(
+                            alpha: 0.14 * progress,
+                          ),
+
+                          borderWidth: 2.5,
+
+                          entryRadius:
+                              3 * progress,
+                        ),
+                      ],
+
+                      radarBorderData: BorderSide(
+                        color:
+                            AppColors.textMuted.withValues(
+                          alpha: 0.22,
+                        ),
                       ),
-                    ],
 
-                    radarBorderData: BorderSide(
-                      color: AppColors.textMuted.withValues(alpha: 0.22),
+                      gridBorderData: BorderSide(
+                        color:
+                            AppColors.textMuted.withValues(
+                          alpha: 0.22,
+                        ),
+                      ),
+
+                      tickBorderData: BorderSide(
+                        color:
+                            AppColors.textMuted.withValues(
+                          alpha: 0.18,
+                        ),
+                      ),
+
+                      titleTextStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
 
-                    gridBorderData: BorderSide(
-                      color: AppColors.textMuted.withValues(alpha: 0.22),
-                    ),
-
-                    tickBorderData: BorderSide(
-                      color: AppColors.textMuted.withValues(alpha: 0.18),
-                    ),
-
-                    titleTextStyle: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  duration: Duration.zero,
-                );
-              },
+                    duration: Duration.zero,
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );

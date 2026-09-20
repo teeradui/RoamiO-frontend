@@ -75,14 +75,14 @@ class TripAward {
     required this.tripId,
     this.userId,
     required this.awardName,
-    this.awardDescription,
+    required this.awardDescription,
   });
 
   final String awardId;
   final String tripId;
   final String? userId;
   final String awardName;
-  final String? awardDescription;
+  final String awardDescription;
 
   factory TripAward.fromJson(Map<String, dynamic> json) {
     return TripAward(
@@ -91,7 +91,10 @@ class TripAward {
       userId: json['userId']?.toString() ?? json['user_id']?.toString(),
       awardName: json['awardName']?.toString() ?? json['award_name']?.toString() ?? '',
       awardDescription:
-          json['awardDescription']?.toString() ?? json['award_description']?.toString(),
+        json['awardDescription']?.toString() ??
+        json['award_description']?.toString() ??
+        json['awardDesc']?.toString() ??
+        '',
     );
   }
 }
@@ -346,6 +349,8 @@ enum ReliabilityAttendance { early, onTime, late, veryLate, missing }
 
 ReliabilityAttendance _attendanceFromString(String? value) {
   switch (value) {
+    case 'VeryEarly':
+      return ReliabilityAttendance.early;
     case 'Early':
       return ReliabilityAttendance.early;
     case 'OnTime':
@@ -354,6 +359,8 @@ ReliabilityAttendance _attendanceFromString(String? value) {
       return ReliabilityAttendance.late;
     case 'VeryLate':
       return ReliabilityAttendance.veryLate;
+    case 'undecided':
+      return ReliabilityAttendance.missing;
     case 'Missing':
     default:
       return ReliabilityAttendance.missing;

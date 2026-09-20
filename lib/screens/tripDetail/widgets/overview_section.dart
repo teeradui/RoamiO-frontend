@@ -664,6 +664,12 @@ class _RadarSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radarData = List<OverviewRadarItem>.from(data);
+
+    if (radarData.length == 2) {
+      radarData.add(OverviewRadarItem(label: '', value: 0));
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -719,7 +725,7 @@ class _RadarSummaryCard extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          if (data.length < 3)
+          if (data.length < 2)
             SizedBox(
               height: 150,
               child: Center(
@@ -736,33 +742,76 @@ class _RadarSummaryCard extends StatelessWidget {
           else
             SizedBox(
               height: 250,
-              child:
-               RadarChart(
-                RadarChartData(
-                  radarShape: RadarShape.polygon,
-                  tickCount: 4,
-                  ticksTextStyle: const TextStyle(
-                    color: Colors.transparent,
-                    fontSize: 0,
-                  ),
-                  getTitle: (index, angle) {
-                    return RadarChartTitle(
-                      text: data[index].label,
-                      angle: angle,
-                    );
-                  },
-                  dataSets: [
-                    RadarDataSet(
-                      dataEntries: data
-                          .map((item) => RadarEntry(value: item.value))
-                          .toList(),
-                      borderColor: AppColors.btnPrimary,
-                      fillColor: AppColors.btnPrimary.withValues(alpha: 0.15),
-                      borderWidth: 2,
-                      entryRadius: 3,
+              child: Builder(
+                builder: (context) {
+                  final maxValue = radarData
+                      .map((item) => item.value)
+                      .reduce((a, b) => a > b ? a : b)
+                      .toDouble();
+
+                  return RadarChart(
+                    RadarChartData(
+                      radarShape: RadarShape.polygon,
+                      tickCount: 4,
+
+                      ticksTextStyle: const TextStyle(
+                        color: Colors.transparent,
+                        fontSize: 0,
+                      ),
+
+                      getTitle: (index, angle) {
+                        return RadarChartTitle(
+                          text: radarData[index].label,
+                          angle: angle,
+                        );
+                      },
+
+                      dataSets: [
+                        RadarDataSet(
+                          dataEntries: radarData
+                              .map((_) => RadarEntry(value: maxValue))
+                              .toList(),
+                          borderColor: Colors.transparent,
+                          fillColor: Colors.transparent,
+                          borderWidth: 0,
+                          entryRadius: 0,
+                        ),
+
+                        RadarDataSet(
+                          dataEntries: radarData
+                              .map((item) => RadarEntry(value: item.value))
+                              .toList(),
+                          borderColor: AppColors.btnPrimary,
+                          fillColor: AppColors.btnPrimary.withValues(
+                            alpha: 0.14,
+                          ),
+                          borderWidth: 2.5,
+                          entryRadius: 3,
+                        ),
+                      ],
+
+                      radarBorderData: BorderSide(
+                        color: AppColors.textMuted.withValues(alpha: 0.22),
+                      ),
+
+                      gridBorderData: BorderSide(
+                        color: AppColors.textMuted.withValues(alpha: 0.22),
+                      ),
+
+                      tickBorderData: BorderSide(
+                        color: AppColors.textMuted.withValues(alpha: 0.18),
+                      ),
+
+                      titleTextStyle: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ],
-                ),
+
+                    duration: Duration.zero,
+                  );
+                },
               ),
             ),
         ],
