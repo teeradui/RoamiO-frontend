@@ -1,0 +1,4 @@
+enum FriendListErrorType {
+  system,
+  network,
+}

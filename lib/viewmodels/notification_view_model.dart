@@ -6,7 +6,7 @@ import 'package:roamio_frontend/models/trip_notification_model.dart';
 
 enum NotificationGroup { today, thisWeek, previous }
 
-enum NotificationType { tripInvite, system, memberActivity }
+enum NotificationType { tripInvite, system, memberActivity, friendRequest }
 
 class NotificationItem {
   final String id;
@@ -19,6 +19,8 @@ class NotificationItem {
   final String? referenceId;
   final String? profileImageUrl;
   final String? username;
+  final String? relatedUserId;
+  final bool isIncomingFriendRequest;
 
   bool isRead;
 
@@ -33,6 +35,8 @@ class NotificationItem {
     this.referenceId,
     this.profileImageUrl,
     this.username,
+    this.relatedUserId,
+    this.isIncomingFriendRequest = false,
     this.isRead = false,
   });
 }
@@ -44,8 +48,8 @@ class NotificationViewModel extends ChangeNotifier {
   NotificationViewModel({
     NotificationService? notificationService,
     TripInviteService? tripInviteService,
-  })  : _notificationService = notificationService ?? NotificationService(),
-        _tripInviteService = tripInviteService ?? TripInviteService();
+  }) : _notificationService = notificationService ?? NotificationService(),
+       _tripInviteService = tripInviteService ?? TripInviteService();
 
   // TODO: no auth wired up yet (see memberSectionViewmodel.dart's identical
   // note) — there's no real signed-in user id available client-side.
@@ -90,6 +94,8 @@ class NotificationViewModel extends ChangeNotifier {
         return "Trip Update";
       case NotificationType.system:
         return "Notification";
+      case NotificationType.friendRequest:
+        return "Friend Request";
     }
   }
 
@@ -97,7 +103,8 @@ class NotificationViewModel extends ChangeNotifier {
     if (createdAt == null) return NotificationGroup.previous;
 
     final now = DateTime.now();
-    final isToday = createdAt.year == now.year &&
+    final isToday =
+        createdAt.year == now.year &&
         createdAt.month == now.month &&
         createdAt.day == now.day;
     if (isToday) return NotificationGroup.today;
@@ -114,7 +121,8 @@ class NotificationViewModel extends ChangeNotifier {
 
     if (diff.inMinutes < 1) return 'just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return '${diff.inHours} hour${diff.inHours == 1 ? '' : 's'} ago';
+    if (diff.inHours < 24)
+      return '${diff.inHours} hour${diff.inHours == 1 ? '' : 's'} ago';
     return '${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
   }
 
@@ -133,14 +141,64 @@ class NotificationViewModel extends ChangeNotifier {
     );
   }
 
+  List<NotificationItem> get friendRequestNotifications {
+    return notifications
+        .where((item) => item.type == NotificationType.friendRequest)
+        .toList();
+  }
+
+  bool get hasFriendRequestNotifications {
+    return friendRequestNotifications.isNotEmpty;
+  }
+
+  final List<NotificationItem> _mockFriendRequestNotifications = [
+    NotificationItem(
+      id: 'friend-request-1',
+      title: 'Emma',
+      message: 'sent you a friend request.',
+      timeText: '2 min ago',
+      group: NotificationGroup.today,
+      type: NotificationType.friendRequest,
+      relatedUserId: '7',
+      username: '@emma',
+      isIncomingFriendRequest: true,
+      isRead: false,
+    ),
+    NotificationItem(
+      id: 'friend-request-2',
+      title: 'James',
+      message: 'accepted your friend request.',
+      timeText: '1 hour ago',
+      group: NotificationGroup.today,
+      type: NotificationType.friendRequest,
+      relatedUserId: '8',
+      username: '@james',
+      isIncomingFriendRequest: false,
+      isRead: true,
+    ),
+  ];
+
+  Future<void> loadFriendRequestNotifications() async {
+    try {
+      notifications.addAll(_mockFriendRequestNotifications);
+      notifyListeners();
+    } catch (e) {
+      errorMessage = "Unable to load notifications. Please try again.";
+      notifyListeners();
+    }
+  }
+
   Future<void> loadNotifications() async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      final fetched = await _notificationService.getNotifications(_currentUserId);
+      final fetched = await _notificationService.getNotifications(
+        _currentUserId,
+      );
       notifications = fetched.map(_toItem).toList();
+      notifications.addAll(_mockFriendRequestNotifications);
     } catch (e) {
       errorMessage = "Unable to load notifications.";
     }
@@ -159,7 +217,6 @@ class NotificationViewModel extends ChangeNotifier {
         await _notificationService.deleteNotification(_currentUserId, item.id);
       }
     } catch (e) {
-
       errorMessage = "Some notifications could not be cleared.";
       await loadNotifications();
     }
@@ -188,7 +245,10 @@ class NotificationViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateInviteStatus(String notificationId, InviteStatus status) async {
+  Future<void> updateInviteStatus(
+    String notificationId,
+    InviteStatus status,
+  ) async {
     final index = notifications.indexWhere((n) => n.id == notificationId);
     if (index == -1) return;
 
@@ -216,7 +276,85 @@ class NotificationViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> acceptInvite(String id) => updateInviteStatus(id, InviteStatus.accept);
+  Future<void> acceptInvite(String id) =>
+      updateInviteStatus(id, InviteStatus.accept);
 
-  Future<void> rejectInvite(String id) => updateInviteStatus(id, InviteStatus.reject);
+  Future<void> rejectInvite(String id) =>
+      updateInviteStatus(id, InviteStatus.reject);
+
+  void receiveFriendRequest({
+    required String userId,
+    required String name,
+    String? username,
+    String? profileImageUrl,
+  }) {
+    final notification = NotificationItem(
+      id: 'friend-request-${DateTime.now().millisecondsSinceEpoch}',
+      title: name,
+      message: 'sent you a friend request.',
+      timeText: 'just now',
+      group: NotificationGroup.today,
+      type: NotificationType.friendRequest,
+      relatedUserId: userId,
+      username: username,
+      profileImageUrl: profileImageUrl,
+      isRead: false,
+    );
+
+    notifications.insert(0, notification);
+    notifyListeners();
+  }
+
+  void receiveFriendRequestAccepted({
+    required String userId,
+    required String name,
+    String? username,
+    String? profileImageUrl,
+  }) {
+    final notification = NotificationItem(
+      id: 'friend-accepted-${DateTime.now().millisecondsSinceEpoch}',
+      title: name,
+      message: 'accepted your friend request.',
+      timeText: 'just now',
+      group: NotificationGroup.today,
+      type: NotificationType.friendRequest,
+      relatedUserId: userId,
+      username: username,
+      profileImageUrl: profileImageUrl,
+      isRead: false,
+    );
+
+    notifications.insert(0, notification);
+    notifyListeners();
+  }
+
+  void acceptFriendRequest(String notificationId) {
+    final index = notifications.indexWhere(
+      (item) =>
+          item.id == notificationId &&
+          item.type == NotificationType.friendRequest,
+    );
+
+    if (index == -1) return;
+
+    notifications.removeAt(index);
+    notifyListeners();
+
+    // TODO: connect friend request API later
+  }
+
+  void rejectFriendRequest(String notificationId) {
+    final index = notifications.indexWhere(
+      (item) =>
+          item.id == notificationId &&
+          item.type == NotificationType.friendRequest,
+    );
+
+    if (index == -1) return;
+
+    notifications.removeAt(index);
+    notifyListeners();
+
+    // TODO: connect friend request API later
+  }
 }

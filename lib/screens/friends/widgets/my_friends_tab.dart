@@ -1,84 +1,125 @@
 import 'package:flutter/material.dart';
+import 'package:ming_cute_icons/ming_cute_icons.dart';
+import 'package:provider/provider.dart';
+import 'package:roamio_frontend/screens/friends/friend_profile_screen.dart';
+import 'package:roamio_frontend/screens/friends/widgets/friend_card.dart';
 import 'package:roamio_frontend/theme/colors.dart';
-import 'package:hugeicons/hugeicons.dart';
+import 'package:roamio_frontend/viewmodels/my_friends_view_model.dart';
 
 class MyFriendsTab extends StatelessWidget {
   const MyFriendsTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        _buildFriendCard(
-          name: 'Mina',
-          username: '@mina',
-        ),
-        const SizedBox(height: 10),
-        _buildFriendCard(
-          name: 'Jane',
-          username: '@jane',
-        ),
-        const SizedBox(height: 10),
-        _buildFriendCard(
-          name: 'Mark',
-          username: '@mark',
-        ),
-      ],
+    return ChangeNotifierProvider(
+      create: (_) => MyFriendsViewModel() /*..loadFriends()*/,
+      child: const _MyFriendsContent(),
     );
   }
+}
 
-  Widget _buildFriendCard({
-    required String name,
-    required String username,
+class _MyFriendsContent extends StatelessWidget {
+  const _MyFriendsContent();
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 12,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircleAvatar(
-            radius: 25,
-            backgroundImage: AssetImage(
-              'assets/images/default_profile.png',
+          Icon(icon, size: 34, color: AppColors.textMuted),
+          
+
+          const SizedBox(height: 16),
+
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  username,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+
+          const SizedBox(height: 6),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 16,
+                height: 1.4,
+              ),
             ),
-          ),
-          const HugeIcon(
-            icon: HugeIcons.strokeRoundedUserCheck01,
-            color: AppColors.tabActive,
-            size: 22,
           ),
         ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MyFriendsViewModel>(
+      builder: (context, viewModel, _) {
+        if (viewModel.errorMessage != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                viewModel.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (viewModel.friends.isEmpty) {
+          return _buildEmptyState(
+            icon: MingCuteIcons.mgc_user_2_line,
+            title: 'No friends yet',
+            message:
+                'Start connecting with people and build your travel circle.',
+          );
+        }
+
+        return ListView.separated(
+          padding: EdgeInsets.zero,
+          itemCount: viewModel.friends.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final friend = viewModel.friends[index];
+
+            return FriendCard(
+              friend: friend,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FriendProfileScreen(userId: friend.userId),
+                  ),
+                );
+              },
+              showReliabilityScore: true,
+              trailing: const Icon(
+                Icons.chevron_right_rounded,
+                size: 26,
+                color: AppColors.textSecondary,
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

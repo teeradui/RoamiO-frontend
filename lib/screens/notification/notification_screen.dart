@@ -108,6 +108,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   Expanded(
                     child: viewModel.isLoading
                         ? const Center(child: CircularProgressIndicator())
+                        : viewModel.errorMessage != null
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Text(
+                                viewModel.errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          )
                         : viewModel.hasNotifications
                         ? ListView(
                             padding: const EdgeInsets.fromLTRB(10, 24, 10, 0),
@@ -120,6 +137,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 onTap: viewModel.markAsRead,
                                 onAccept: viewModel.acceptInvite,
                                 onReject: viewModel.rejectInvite,
+                                onAcceptFriendRequest:
+                                    viewModel.acceptFriendRequest,
+                                onRejectFriendRequest:
+                                    viewModel.rejectFriendRequest,
                               ),
                               _NotificationGroupSection(
                                 title: "This week",
@@ -129,6 +150,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 onTap: viewModel.markAsRead,
                                 onAccept: viewModel.acceptInvite,
                                 onReject: viewModel.rejectInvite,
+                                onAcceptFriendRequest:
+                                    viewModel.acceptFriendRequest,
+                                onRejectFriendRequest:
+                                    viewModel.rejectFriendRequest,
                               ),
                               _NotificationGroupSection(
                                 title: "Previous notifications",
@@ -138,6 +163,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 onTap: viewModel.markAsRead,
                                 onAccept: viewModel.acceptInvite,
                                 onReject: viewModel.rejectInvite,
+                                onAcceptFriendRequest:
+                                    viewModel.acceptFriendRequest,
+                                onRejectFriendRequest:
+                                    viewModel.rejectFriendRequest,
                               ),
                             ],
                           )
@@ -169,7 +198,7 @@ class _EmptyNotification extends StatelessWidget {
           ),
           SizedBox(height: 18),
           Text(
-            "No notifications yet",
+            "No have any notifications yet",
             style: TextStyle(
               color: AppColors.tabInactive,
               fontSize: 16,
@@ -189,6 +218,8 @@ class _NotificationGroupSection extends StatelessWidget {
     required this.onTap,
     required this.onAccept,
     required this.onReject,
+    required this.onAcceptFriendRequest,
+    required this.onRejectFriendRequest,
   });
 
   final String title;
@@ -196,6 +227,8 @@ class _NotificationGroupSection extends StatelessWidget {
   final ValueChanged<String> onTap;
   final ValueChanged<String> onAccept;
   final ValueChanged<String> onReject;
+  final ValueChanged<String> onAcceptFriendRequest;
+  final ValueChanged<String> onRejectFriendRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -227,8 +260,12 @@ class _NotificationGroupSection extends StatelessWidget {
               return _NotificationCard(
                 notification: item,
                 onTap: () => onTap(item.id),
-                onAccept: () => onAccept(item.id),
-                onReject: () => onReject(item.id),
+                onAccept: item.type == NotificationType.friendRequest
+                    ? () => onAcceptFriendRequest(item.id)
+                    : () => onAccept(item.id),
+                onReject: item.type == NotificationType.friendRequest
+                    ? () => onRejectFriendRequest(item.id)
+                    : () => onReject(item.id),
               );
             },
           ),
@@ -253,6 +290,8 @@ class _NotificationCard extends StatelessWidget {
 
   bool get isTripInvite => notification.type == NotificationType.tripInvite;
   bool get isSystem => notification.type == NotificationType.system;
+  bool get isFriendRequest =>
+      notification.type == NotificationType.friendRequest;
 
   @override
   Widget build(BuildContext context) {
@@ -318,9 +357,8 @@ class _NotificationCard extends StatelessWidget {
                     ),
                   ),
 
-                  if (isTripInvite) ...[
+                  if (isTripInvite || notification.isIncomingFriendRequest) ...[
                     const SizedBox(height: 10),
-
                     Row(
                       children: [
                         ElevatedButton(
@@ -340,9 +378,7 @@ class _NotificationCard extends StatelessWidget {
                             ),
                           ),
                         ),
-
                         const SizedBox(width: 8),
-
                         OutlinedButton(
                           onPressed: onReject,
                           style: OutlinedButton.styleFrom(
@@ -350,7 +386,6 @@ class _NotificationCard extends StatelessWidget {
                             side: const BorderSide(color: AppColors.btnPrimary),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(100),
-                              
                             ),
                           ),
                           child: const Text(

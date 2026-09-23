@@ -6,12 +6,14 @@ import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/score_history_view_model.dart';
 
 class ScoreHistorySection extends StatelessWidget {
-  const ScoreHistorySection({super.key});
+  const ScoreHistorySection({super.key, this.userId});
+
+  final String? userId;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ScoreHistoryViewModel(),
+      create: (_) => ScoreHistoryViewModel(userId: userId),
       child: const _ScoreHistoryContent(),
     );
   }

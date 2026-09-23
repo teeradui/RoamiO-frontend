@@ -6,10 +6,12 @@ class FriendTabSelector extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onChanged,
+    this.requestCount = 0,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onChanged;
+  final int requestCount;
 
   static const List<String> _tabs = [
     'My Friends',
@@ -55,6 +57,8 @@ class FriendTabSelector extends StatelessWidget {
                       child: _buildTab(
                         title: _tabs[index],
                         selected: selectedIndex == index,
+                        requestCount:
+                            index == 1 ? requestCount : 0,
                         onTap: () => onChanged(index),
                       ),
                     );
@@ -71,6 +75,7 @@ class FriendTabSelector extends StatelessWidget {
   Widget _buildTab({
     required String title,
     required bool selected,
+    required int requestCount,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -86,7 +91,33 @@ class FriendTabSelector extends StatelessWidget {
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
-          child: Text(title),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title),
+
+              if (requestCount > 0) ...[
+                const SizedBox(width: 5),
+                Container(
+                  width: 20,
+                  height: 20,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.bgOrange,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$requestCount',
+                    style: const TextStyle(
+                      color: AppColors.orange,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

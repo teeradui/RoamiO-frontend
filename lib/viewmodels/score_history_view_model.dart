@@ -28,46 +28,53 @@ class ScoreHistoryItem {
 }
 
 class ScoreHistoryViewModel extends ChangeNotifier {
-  final List<ScoreHistoryItem> _history = [
-    ScoreHistoryItem(
+  final String? userId;
+
+  ScoreHistoryViewModel({this.userId});
+
+  List<ScoreHistoryItem> get history {
+    if (userId == null) {
+      return _myHistory;
+    }
+
+    return _friendHistory;
+  }
+
+  final List<ScoreHistoryItem> _myHistory = [
+     ScoreHistoryItem(
       tripName: 'Chiang Mai Cafe Hopping',
       tripDate: DateTime(2026, 9, 18),
       status: ScoreHistoryStatus.onTime,
       score: 15,
     ),
-    ScoreHistoryItem(
+     ScoreHistoryItem(
       tripName: 'Doi Suthep Adventure',
       tripDate: DateTime(2026, 9, 12),
       status: ScoreHistoryStatus.arrivedEarly,
       score: 25,
     ),
-    ScoreHistoryItem(
-      tripName: 'Weekend at Pai',
-      tripDate: DateTime(2026, 9, 5),
-      status: ScoreHistoryStatus.slightDelay,
-      score: -10,
+  ];
+
+  final List<ScoreHistoryItem> _friendHistory = [
+     ScoreHistoryItem(
+      tripName: 'Pai Weekend',
+      tripDate: DateTime(2026, 9, 15),
+      status: ScoreHistoryStatus.arrivedEarly,
+      score: 25,
     ),
-    ScoreHistoryItem(
-      tripName: 'Mae Kampong Trip',
-      tripDate: DateTime(2026, 8, 28),
+     ScoreHistoryItem(
+      tripName: 'Chiang Rai Trip',
+      tripDate: DateTime(2026, 9, 8),
       status: ScoreHistoryStatus.onTime,
       score: 15,
     ),
-    ScoreHistoryItem(
-      tripName: 'Chiang Rai Road Trip',
-      tripDate: DateTime(2026, 8, 20),
-      status: ScoreHistoryStatus.extendedDelay,
-      score: -20,
-    ),
-    ScoreHistoryItem(
-      tripName: 'Mountain View Trip',
-      tripDate: DateTime(2026, 8, 14),
-      status: ScoreHistoryStatus.ghost,
-      score: -30,
+     ScoreHistoryItem(
+      tripName: 'Mae Kampong Trip',
+      tripDate: DateTime(2026, 8, 28),
+      status: ScoreHistoryStatus.slightDelay,
+      score: -10,
     ),
   ];
-
-  List<ScoreHistoryItem> get history => List.unmodifiable(_history);
 
   String getStatusText(ScoreHistoryStatus status) {
     switch (status) {
@@ -143,13 +150,5 @@ class ScoreHistoryViewModel extends ChangeNotifier {
       case ScoreHistoryStatus.ghost:
         return AppColors.ghostColor;
     }
-  }
-
-  void setHistory(List<ScoreHistoryItem> history) {
-    _history
-      ..clear()
-      ..addAll(history);
-
-    notifyListeners();
   }
 }
