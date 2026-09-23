@@ -70,6 +70,8 @@ flutter:
     - assets/Rewardlighteffect.json
     - assets/Car.json
     - assets/Confetti.json
+    - assets/crown.json
+    - assets/FlexConfetti.json
     - assets/Fireworks.json
     - assets/storyicon.json
     - assets/logo/logo.png
@@ -96,6 +98,9 @@ flutter:
     - assets/storyBg/19.png
     - assets/storyBg/20.png
     - assets/storyBg/21.png
+    - assets/bgPodium/first.png
+    - assets/bgPodium/sec.png
+    - assets/bgPodium/third.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

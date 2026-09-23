@@ -65,6 +65,10 @@ class AppColors {
   static const Color bgPhoto = Color(0x39FBDD6F);
   static const Color borderPhoto = Color(0xFFFFCD29);
 
+  static const Color first = Color(0xFFDAA700);
+  static const Color sec = Color(0xFF8D8D8D);
+  static const Color third = Color(0xFFDD5500);
+
   // icon graph
   static const List<Color> iconGroupGraph = [
     Color(0xFFFFC4C4),
@@ -76,6 +80,14 @@ class AppColors {
     Color(0xFFFFAC07),
     Color(0xFFE26109),
     Color(0xFFC20C0C),
+    Color(0xFF860909),
+  ];
+
+  static const List<Color> medal = [
+    Color.fromARGB(255, 255, 188, 55),
+    Color(0xFFFFAC07),
+    Color.fromARGB(255, 254, 124, 38),
+    Color.fromARGB(255, 216, 34, 34),
     Color(0xFF860909),
   ];
 

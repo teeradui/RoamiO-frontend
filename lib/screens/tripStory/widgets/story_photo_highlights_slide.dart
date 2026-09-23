@@ -7,10 +7,7 @@ import 'package:roamio_frontend/viewmodels/story_photo_highlights_view_model.dar
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 class StoryPhotoHighlightsSlide extends StatefulWidget {
-  const StoryPhotoHighlightsSlide({
-    super.key,
-    required this.tripId,
-  });
+  const StoryPhotoHighlightsSlide({super.key, required this.tripId});
 
   final String tripId;
 
@@ -19,8 +16,7 @@ class StoryPhotoHighlightsSlide extends StatefulWidget {
       _StoryPhotoHighlightsSlideState();
 }
 
-class _StoryPhotoHighlightsSlideState
-    extends State<StoryPhotoHighlightsSlide>
+class _StoryPhotoHighlightsSlideState extends State<StoryPhotoHighlightsSlide>
     with SingleTickerProviderStateMixin {
   late final StoryPhotoHighlightsViewModel viewModel;
   late final AnimationController _animationController;
@@ -29,9 +25,7 @@ class _StoryPhotoHighlightsSlideState
   void initState() {
     super.initState();
 
-    viewModel = StoryPhotoHighlightsViewModel(
-      tripId: widget.tripId,
-    );
+    viewModel = StoryPhotoHighlightsViewModel(tripId: widget.tripId);
 
     _animationController = AnimationController(
       vsync: this,
@@ -60,9 +54,7 @@ class _StoryPhotoHighlightsSlideState
       builder: (context, _) {
         if (viewModel.isLoading) {
           return const Center(
-            child: CircularProgressIndicator(
-              color: AppColors.btnPrimary,
-            ),
+            child: CircularProgressIndicator(color: AppColors.btnPrimary),
           );
         }
 
@@ -83,9 +75,7 @@ class _StoryPhotoHighlightsSlideState
           return const Center(
             child: Text(
               'No photo highlights available.',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(color: AppColors.textSecondary),
             ),
           );
         }
@@ -93,10 +83,7 @@ class _StoryPhotoHighlightsSlideState
         return Container(
           width: double.infinity,
           height: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 22,
-            vertical: 36,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 36),
           child: Transform.translate(
             offset: const Offset(0, 18),
             child: Column(
@@ -105,26 +92,23 @@ class _StoryPhotoHighlightsSlideState
                 FadeTransition(
                   opacity: CurvedAnimation(
                     parent: _animationController,
-                    curve: const Interval(
-                      0.00,
-                      0.25,
-                      curve: Curves.easeOut,
-                    ),
+                    curve: const Interval(0.00, 0.25, curve: Curves.easeOut),
                   ),
                   child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, -0.18),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: _animationController,
-                        curve: const Interval(
-                          0.00,
-                          0.30,
-                          curve: Curves.easeOutCubic,
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, -0.18),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: _animationController,
+                            curve: const Interval(
+                              0.00,
+                              0.30,
+                              curve: Curves.easeOutCubic,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
                     child: const Column(
                       children: [
                         Text(
@@ -159,14 +143,10 @@ class _StoryPhotoHighlightsSlideState
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(
-                      alpha: 0.18,
-                    ),
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(100),
                     border: Border.all(
-                      color: Colors.white.withValues(
-                        alpha: 0.32,
-                      ),
+                      color: Colors.white.withValues(alpha: 0.32),
                     ),
                   ),
                   child: Row(
@@ -193,10 +173,7 @@ class _StoryPhotoHighlightsSlideState
                 const SizedBox(height: 12),
 
                 ScaleTransition(
-                  scale: Tween<double>(
-                    begin: 0.75,
-                    end: 1.0,
-                  ).animate(
+                  scale: Tween<double>(begin: 0.75, end: 1.0).animate(
                     CurvedAnimation(
                       parent: _animationController,
                       curve: const Interval(
@@ -209,11 +186,7 @@ class _StoryPhotoHighlightsSlideState
                   child: FadeTransition(
                     opacity: CurvedAnimation(
                       parent: _animationController,
-                      curve: const Interval(
-                        0.15,
-                        0.35,
-                        curve: Curves.easeOut,
-                      ),
+                      curve: const Interval(0.15, 0.35, curve: Curves.easeOut),
                     ),
                     child: Container(),
                   ),
@@ -224,17 +197,10 @@ class _StoryPhotoHighlightsSlideState
                 FadeTransition(
                   opacity: CurvedAnimation(
                     parent: _animationController,
-                    curve: const Interval(
-                      0.28,
-                      0.55,
-                      curve: Curves.easeOut,
-                    ),
+                    curve: const Interval(0.28, 0.55, curve: Curves.easeOut),
                   ),
                   child: ScaleTransition(
-                    scale: Tween<double>(
-                      begin: 0.82,
-                      end: 1.0,
-                    ).animate(
+                    scale: Tween<double>(begin: 0.82, end: 1.0).animate(
                       CurvedAnimation(
                         parent: _animationController,
                         curve: const Interval(
@@ -269,23 +235,19 @@ class _StoryPhotoHighlightsSlideState
                                     ),
                                   ),
                                   child: ScaleTransition(
-                                    scale: Tween<double>(
-                                      begin: 0.82,
-                                      end: 1.0,
-                                    ).animate(
-                                      CurvedAnimation(
-                                        parent:
-                                            _animationController,
-                                        curve: const Interval(
-                                          0.25,
-                                          0.52,
-                                          curve: Curves.easeOutBack,
+                                    scale: Tween<double>(begin: 0.82, end: 1.0)
+                                        .animate(
+                                          CurvedAnimation(
+                                            parent: _animationController,
+                                            curve: const Interval(
+                                              0.25,
+                                              0.52,
+                                              curve: Curves.easeOutBack,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ),
                                     child: _HighlightPhotoCard(
-                                      location:
-                                          viewModel.topLocations[0],
+                                      location: viewModel.topLocations[0],
                                       large: true,
                                     ),
                                   ),
@@ -308,13 +270,11 @@ class _StoryPhotoHighlightsSlideState
                                       Expanded(
                                         child: FadeTransition(
                                           opacity: CurvedAnimation(
-                                            parent:
-                                                _animationController,
+                                            parent: _animationController,
                                             curve: const Interval(
                                               0.38,
                                               0.60,
-                                              curve:
-                                                  Curves.easeOut,
+                                              curve: Curves.easeOut,
                                             ),
                                           ),
                                           child: ScaleTransition(
@@ -326,21 +286,16 @@ class _StoryPhotoHighlightsSlideState
                                                   CurvedAnimation(
                                                     parent:
                                                         _animationController,
-                                                    curve:
-                                                        const Interval(
+                                                    curve: const Interval(
                                                       0.38,
                                                       0.64,
-                                                      curve:
-                                                          Curves
-                                                              .easeOutBack,
+                                                      curve: Curves.easeOutBack,
                                                     ),
                                                   ),
                                                 ),
-                                            child:
-                                                _HighlightPhotoCard(
+                                            child: _HighlightPhotoCard(
                                               location:
-                                                  viewModel
-                                                      .topLocations[1],
+                                                  viewModel.topLocations[1],
                                             ),
                                           ),
                                         ),
@@ -350,27 +305,21 @@ class _StoryPhotoHighlightsSlideState
                                       // #3
                                       // Only rendered when it actually exists.
                                       // =========================================
-                                      if (viewModel
-                                              .topLocations.length >
+                                      if (viewModel.topLocations.length >
                                           2) ...[
                                         const SizedBox(height: 10),
 
                                         Expanded(
                                           child: FadeTransition(
-                                            opacity:
-                                                CurvedAnimation(
-                                              parent:
-                                                  _animationController,
-                                              curve:
-                                                  const Interval(
+                                            opacity: CurvedAnimation(
+                                              parent: _animationController,
+                                              curve: const Interval(
                                                 0.51,
                                                 0.73,
-                                                curve:
-                                                    Curves.easeOut,
+                                                curve: Curves.easeOut,
                                               ),
                                             ),
-                                            child:
-                                                ScaleTransition(
+                                            child: ScaleTransition(
                                               scale:
                                                   Tween<double>(
                                                     begin: 0.82,
@@ -379,21 +328,17 @@ class _StoryPhotoHighlightsSlideState
                                                     CurvedAnimation(
                                                       parent:
                                                           _animationController,
-                                                      curve:
-                                                          const Interval(
+                                                      curve: const Interval(
                                                         0.51,
                                                         0.77,
                                                         curve:
-                                                            Curves
-                                                                .easeOutBack,
+                                                            Curves.easeOutBack,
                                                       ),
                                                     ),
                                                   ),
-                                              child:
-                                                  _HighlightPhotoCard(
+                                              child: _HighlightPhotoCard(
                                                 location:
-                                                    viewModel
-                                                        .topLocations[2],
+                                                    viewModel.topLocations[2],
                                               ),
                                             ),
                                           ),
@@ -437,65 +382,46 @@ class _StoryPhotoHighlightsSlideState
                 const SizedBox(height: 20),
 
                 Column(
-                  children: List.generate(
-                    viewModel.topLocations.length,
-                    (index) {
-                      final location =
-                          viewModel.topLocations[index];
+                  children: List.generate(viewModel.topLocations.length, (
+                    index,
+                  ) {
+                    final location = viewModel.topLocations[index];
 
-                      final start =
-                          0.48 + (index * 0.10);
+                    final start = 0.48 + (index * 0.10);
 
-                      final end =
-                          0.72 + (index * 0.10);
+                    final end = 0.72 + (index * 0.10);
 
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom:
-                              index ==
-                                  viewModel
-                                          .topLocations.length -
-                                      1
-                              ? 0
-                              : 9,
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index == viewModel.topLocations.length - 1
+                            ? 0
+                            : 9,
+                      ),
+                      child: FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: _animationController,
+                          curve: Interval(start, end, curve: Curves.easeOut),
                         ),
-                        child: FadeTransition(
-                          opacity: CurvedAnimation(
-                            parent: _animationController,
-                            curve: Interval(
-                              start,
-                              end,
-                              curve: Curves.easeOut,
-                            ),
-                          ),
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(
-                                0,
-                                0.35,
-                              ),
-                              end: Offset.zero,
-                            ).animate(
-                              CurvedAnimation(
-                                parent:
-                                    _animationController,
-                                curve: Interval(
-                                  start,
-                                  end,
-                                  curve:
-                                      Curves.easeOutCubic,
+                        child: SlideTransition(
+                          position:
+                              Tween<Offset>(
+                                begin: const Offset(0, 0.35),
+                                end: Offset.zero,
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: _animationController,
+                                  curve: Interval(
+                                    start,
+                                    end,
+                                    curve: Curves.easeOutCubic,
+                                  ),
                                 ),
                               ),
-                            ),
-                            child:
-                                _LocationRankingBanner(
-                              location: location,
-                            ),
-                          ),
+                          child: _LocationRankingBanner(location: location),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  }),
                 ),
               ],
             ),
@@ -507,21 +433,16 @@ class _StoryPhotoHighlightsSlideState
 }
 
 class _HighlightPhotoCard extends StatefulWidget {
-  const _HighlightPhotoCard({
-    required this.location,
-    this.large = false,
-  });
+  const _HighlightPhotoCard({required this.location, this.large = false});
 
   final StoryHighlightLocation location;
   final bool large;
 
   @override
-  State<_HighlightPhotoCard> createState() =>
-      _HighlightPhotoCardState();
+  State<_HighlightPhotoCard> createState() => _HighlightPhotoCardState();
 }
 
-class _HighlightPhotoCardState
-    extends State<_HighlightPhotoCard> {
+class _HighlightPhotoCardState extends State<_HighlightPhotoCard> {
   int _currentPhotoIndex = 0;
 
   Timer? _photoTimer;
@@ -556,16 +477,11 @@ class _HighlightPhotoCardState
     try {
       await Future.wait(
         photos.map((photo) {
-          return precacheImage(
-            NetworkImage(photo.imageUrl),
-            context,
-          );
+          return precacheImage(NetworkImage(photo.imageUrl), context);
         }),
       );
     } catch (error) {
-      debugPrint(
-        'PHOTO PRELOAD ERROR: $error',
-      );
+      debugPrint('PHOTO PRELOAD ERROR: $error');
     }
 
     if (!mounted) {
@@ -580,41 +496,26 @@ class _HighlightPhotoCardState
   }
 
   void _startPhotoSlideshow() {
-    final photos =
-        widget.location.highlightPhotos;
+    final photos = widget.location.highlightPhotos;
 
     _photoTimer?.cancel();
 
-    final interval = switch (
-        widget.location.rank) {
-      1 => const Duration(
-          milliseconds: 3200,
-        ),
-      2 => const Duration(
-          milliseconds: 3600,
-        ),
-      3 => const Duration(
-          milliseconds: 4000,
-        ),
-      _ => const Duration(
-          milliseconds: 3500,
-        ),
+    final interval = switch (widget.location.rank) {
+      1 => const Duration(milliseconds: 3200),
+      2 => const Duration(milliseconds: 3600),
+      3 => const Duration(milliseconds: 4000),
+      _ => const Duration(milliseconds: 3500),
     };
 
-    _photoTimer = Timer.periodic(
-      interval,
-      (_) {
-        if (!mounted) {
-          return;
-        }
+    _photoTimer = Timer.periodic(interval, (_) {
+      if (!mounted) {
+        return;
+      }
 
-        setState(() {
-          _currentPhotoIndex =
-              (_currentPhotoIndex + 1) %
-                  photos.length;
-        });
-      },
-    );
+      setState(() {
+        _currentPhotoIndex = (_currentPhotoIndex + 1) % photos.length;
+      });
+    });
   }
 
   @override
@@ -626,15 +527,13 @@ class _HighlightPhotoCardState
 
   @override
   Widget build(BuildContext context) {
-    final photos =
-        widget.location.highlightPhotos;
+    final photos = widget.location.highlightPhotos;
 
     if (photos.isEmpty) {
       return Container(
         decoration: BoxDecoration(
           color: AppColors.bgAccent,
-          borderRadius:
-              BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: const Center(
           child: Icon(
@@ -645,77 +544,45 @@ class _HighlightPhotoCardState
       );
     }
 
-    final currentPhoto =
-        photos[_currentPhotoIndex];
+    final currentPhoto = photos[_currentPhotoIndex];
 
     return ClipRRect(
-      borderRadius:
-          BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(20),
       child: Stack(
         fit: StackFit.expand,
         children: [
           AnimatedSwitcher(
-            duration: const Duration(
-              milliseconds: 980,
-            ),
-            reverseDuration:
-                const Duration(
-              milliseconds: 980,
-            ),
-            switchInCurve:
-                Curves.easeInOutCubic,
-            switchOutCurve:
-                Curves.easeInOutCubic,
-            layoutBuilder:
-                (
-                  currentChild,
-                  previousChildren,
-                ) {
+            duration: const Duration(milliseconds: 980),
+            reverseDuration: const Duration(milliseconds: 980),
+            switchInCurve: Curves.easeInOutCubic,
+            switchOutCurve: Curves.easeInOutCubic,
+            layoutBuilder: (currentChild, previousChildren) {
               return Stack(
                 fit: StackFit.expand,
                 children: [
                   ...previousChildren,
-                  if (currentChild != null)
-                    currentChild,
+                  if (currentChild != null) currentChild,
                 ],
               );
             },
-            transitionBuilder:
-                (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
+            transitionBuilder: (child, animation) {
+              return FadeTransition(opacity: animation, child: child);
             },
             child: Image(
-              key: ValueKey(
-                currentPhoto.id,
-              ),
-              image: NetworkImage(
-                currentPhoto.imageUrl,
-              ),
+              key: ValueKey(currentPhoto.id),
+              image: NetworkImage(currentPhoto.imageUrl),
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
               gaplessPlayback: true,
-              errorBuilder:
-                  (
-                    context,
-                    error,
-                    stackTrace,
-                  ) {
+              errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  key: ValueKey(
-                    'error_${currentPhoto.id}',
-                  ),
+                  key: ValueKey('error_${currentPhoto.id}'),
                   color: AppColors.bgAccent,
-                  alignment:
-                      Alignment.center,
+                  alignment: Alignment.center,
                   child: const Icon(
-                    MingCuteIcons
-                        .mgc_photo_album_fill,
-                    color:
-                        AppColors.textDisabled,
+                    MingCuteIcons.mgc_photo_album_fill,
+                    color: AppColors.textDisabled,
                   ),
                 );
               },
@@ -726,18 +593,12 @@ class _HighlightPhotoCardState
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient:
-                      LinearGradient(
-                    begin:
-                        Alignment.topCenter,
-                    end:
-                        Alignment.bottomCenter,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black
-                          .withValues(
-                        alpha: 0.55,
-                      ),
+                      Colors.black.withValues(alpha: 0.55),
                     ],
                   ),
                 ),
@@ -750,35 +611,25 @@ class _HighlightPhotoCardState
             right: 10,
             bottom: 10,
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '#${widget.location.rank}',
-                  style:
-                      const TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
-                    fontWeight:
-                        FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  widget.location
-                      .locationName,
-                  maxLines:
-                      widget.large ? 2 : 1,
-                  overflow:
-                      TextOverflow.ellipsis,
+                  widget.location.locationName,
+                  maxLines: widget.large ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize:
-                        widget.large
-                            ? 15
-                            : 12,
-                    fontWeight:
-                        FontWeight.bold,
+                    fontSize: widget.large ? 15 : 12,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -790,30 +641,21 @@ class _HighlightPhotoCardState
   }
 }
 
-class _LocationRankingBanner
-    extends StatelessWidget {
-  const _LocationRankingBanner({
-    required this.location,
-  });
+class _LocationRankingBanner extends StatelessWidget {
+  const _LocationRankingBanner({required this.location});
 
   final StoryHighlightLocation location;
 
   Color get _rankColor {
     switch (location.rank) {
       case 1:
-        return const Color(
-          0xFFD99A00,
-        );
+        return const Color(0xFFD99A00);
 
       case 2:
-        return const Color(
-          0xFF8E98A3,
-        );
+        return const Color(0xFF8E98A3);
 
       case 3:
-        return const Color(
-          0xFFB86B3D,
-        );
+        return const Color(0xFFB86B3D);
 
       default:
         return AppColors.textSecondary;
@@ -823,19 +665,13 @@ class _LocationRankingBanner
   Color get _rankBackground {
     switch (location.rank) {
       case 1:
-        return const Color(
-          0xFFFFF3C4,
-        );
+        return const Color(0xFFFFF3C4);
 
       case 2:
-        return const Color(
-          0xFFF0F2F4,
-        );
+        return const Color(0xFFF0F2F4);
 
       case 3:
-        return const Color(
-          0xFFF8E4D8,
-        );
+        return const Color(0xFFF8E4D8);
 
       default:
         return AppColors.bgAccent;
@@ -845,20 +681,16 @@ class _LocationRankingBanner
   IconData get _rankIcon {
     switch (location.rank) {
       case 1:
-        return TablerIcons
-            .laurelWreath1;
+        return TablerIcons.laurelWreath1;
 
       case 2:
-        return TablerIcons
-            .laurelWreath2;
+        return TablerIcons.laurelWreath2;
 
       case 3:
-        return TablerIcons
-            .laurelWreath3;
+        return TablerIcons.laurelWreath3;
 
       default:
-        return TablerIcons
-            .laurelWreath;
+        return TablerIcons.laurelWreath;
     }
   }
 
@@ -866,24 +698,15 @@ class _LocationRankingBanner
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 11,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius:
-            BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black
-                .withValues(
-              alpha: 0.06,
-            ),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 9,
-            offset:
-                const Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -894,24 +717,16 @@ class _LocationRankingBanner
             height: 38,
             decoration: BoxDecoration(
               color: _rankBackground,
-              borderRadius:
-                  BorderRadius.circular(
-                12,
-              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              _rankIcon,
-              color: _rankColor,
-              size: 21,
-            ),
+            child: Icon(_rankIcon, color: _rankColor, size: 21),
           ),
 
           const SizedBox(width: 11),
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
@@ -920,8 +735,7 @@ class _LocationRankingBanner
                       style: TextStyle(
                         color: _rankColor,
                         fontSize: 13,
-                        fontWeight:
-                            FontWeight.w800,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
 
@@ -929,20 +743,13 @@ class _LocationRankingBanner
 
                     Expanded(
                       child: Text(
-                        location
-                            .locationName,
+                        location.locationName,
                         maxLines: 1,
-                        overflow:
-                            TextOverflow
-                                .ellipsis,
-                        style:
-                            const TextStyle(
-                          color: AppColors
-                              .textPrimary,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
                           fontSize: 14,
-                          fontWeight:
-                              FontWeight
-                                  .w700,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -954,15 +761,11 @@ class _LocationRankingBanner
                 Text(
                   location.subtitle,
                   maxLines: 1,
-                  overflow:
-                      TextOverflow.ellipsis,
-                  style:
-                      const TextStyle(
-                    color: AppColors
-                        .textSecondary,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
                     fontSize: 11,
-                    fontWeight:
-                        FontWeight.w500,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -972,23 +775,15 @@ class _LocationRankingBanner
           const SizedBox(width: 10),
 
           Container(
-            padding:
-                const EdgeInsets.symmetric(
-              horizontal: 9,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: BoxDecoration(
               color: _rankBackground,
-              borderRadius:
-                  BorderRadius.circular(
-                100,
-              ),
+              borderRadius: BorderRadius.circular(100),
             ),
             child: Row(
               children: [
                 Icon(
-                  MingCuteIcons
-                      .mgc_camera_2_ai_fill,
+                  MingCuteIcons.mgc_camera_2_ai_fill,
                   size: 14,
                   color: _rankColor,
                 ),
@@ -1000,8 +795,7 @@ class _LocationRankingBanner
                   style: TextStyle(
                     color: _rankColor,
                     fontSize: 12,
-                    fontWeight:
-                        FontWeight.w800,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],

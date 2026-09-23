@@ -95,7 +95,7 @@ class FriendCard extends StatelessWidget {
                           ShaderMask(
                             shaderCallback: (bounds) {
                               return const LinearGradient(
-                                colors: AppColors.iconPersonalGraph,
+                                colors: AppColors.medal,
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                               ).createShader(bounds);
