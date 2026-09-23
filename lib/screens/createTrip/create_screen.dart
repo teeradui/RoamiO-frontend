@@ -114,6 +114,7 @@ class _CreateTripScreenBodyState extends State<_CreateTripScreenBody> {
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary
                         ),
                       ),
                     ),
