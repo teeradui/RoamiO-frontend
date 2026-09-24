@@ -3,6 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:roamio_frontend/screens/profile/settings_screen.dart';
 import 'package:roamio_frontend/viewmodels/story_trip_awards_view_model.dart';
 
+class ProfileUser {
+  final String userId;
+  final String name;
+  final String username;
+  final String? profileImageUrl;
+  final int reliabilityScore;
+
+  const ProfileUser({
+    required this.userId,
+    required this.name,
+    required this.username,
+    this.profileImageUrl,
+    required this.reliabilityScore,
+  });
+}
+
 class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel() {
     loadProfileAwards(tripId: '1');
@@ -17,62 +33,75 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   // Profile information
-  String _name = 'Teedy';
-  String _username = 'teeradui';
-  String _profileImage = 'https://i.pinimg.com/736x/8e/d3/49/8ed349e7e3e46319c775edf070887e13.jpg';
+  ProfileUser _user = const ProfileUser(
+    userId: '1',
+    name: 'Tiana',
+    username: '@tiana',
+    profileImageUrl:
+        'https://i.pinimg.com/736x/8e/d3/49/8ed349e7e3e46319c775edf070887e13.jpg',
+    reliabilityScore: 367,
+  );
+
+  ProfileUser get user => _user;
+
+  String get name => _user.name;
+  String get username => _user.username;
+  String? get profileImageUrl => _user.profileImageUrl;
+  int get reliabilityScore => _user.reliabilityScore;
 
   // Trip statistics
   int _tripsCompleted = 12;
   int _joined = 12;
   int _attended = 12;
 
-  // Reliability Credit Score
-  int _reliabilityScore = 367;
-
-  String get name => _name;
-  String get username => _username;
-  String get profileImage => _profileImage;
-
   int get tripsCompleted => _tripsCompleted;
   int get joined => _joined;
   int get attended => _attended;
 
-  int get reliabilityScore => _reliabilityScore;
-
-  /// Attendance rate
+  // Attendance rate
   int get attendanceRate {
     if (_joined == 0) return 0;
 
     return ((_attended / _joined) * 100).round().clamp(0, 100);
   }
 
+  // Reliability title
   String get reliabilityTitle {
-    if (_reliabilityScore >= 300) {
+    final score = _user.reliabilityScore;
+
+    if (score >= 300) {
       return 'Journey Legend';
-    } else if (_reliabilityScore >= 270) {
+    } else if (score >= 270) {
       return 'Travel Master';
-    } else if (_reliabilityScore >= 250) {
+    } else if (score >= 250) {
       return 'Road Warrior';
-    } else if (_reliabilityScore >= 230) {
+    } else if (score >= 230) {
       return 'Reliable Explorer';
-    } else if (_reliabilityScore >= 200) {
+    } else if (score >= 200) {
       return 'Happy Traveler';
-    } else if (_reliabilityScore >= 170) {
+    } else if (score >= 170) {
       return 'Getting There';
-    } else if (_reliabilityScore >= 150) {
+    } else if (score >= 150) {
       return 'Weekend Wanderer';
-    } else if (_reliabilityScore >= 130) {
+    } else if (score >= 130) {
       return 'Trip Rookie';
     } else {
       return 'Trip Ghost';
     }
   }
 
-  /// Score color
-  bool get isReliable => _reliabilityScore >= 200;
+  // Score color
+  bool get isReliable => _user.reliabilityScore >= 200;
 
   void setReliabilityScore(int score) {
-    _reliabilityScore = score;
+    _user = ProfileUser(
+      userId: _user.userId,
+      name: _user.name,
+      username: _user.username,
+      profileImageUrl: _user.profileImageUrl,
+      reliabilityScore: score,
+    );
+
     notifyListeners();
   }
 
@@ -89,12 +118,17 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    _name = '';
-    _username = '';
+    _user = const ProfileUser(
+      userId: '',
+      name: '',
+      username: '',
+      profileImageUrl: null,
+      reliabilityScore: 0,
+    );
+
     _tripsCompleted = 0;
     _joined = 0;
     _attended = 0;
-    _reliabilityScore = 0;
     _awards = [];
 
     notifyListeners();
@@ -103,9 +137,14 @@ class ProfileViewModel extends ChangeNotifier {
   void openSettings(BuildContext context) {
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    ).push(
+      MaterialPageRoute(
+        builder: (_) => const SettingsScreen(),
+      ),
+    );
   }
 
+  // Awards
   List<StoryTripAward> _awards = [];
 
   List<StoryTripAward> get awards => _awards;
@@ -117,26 +156,28 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadProfileAwards({required String tripId}) async {
-  if (_isDisposed) return;
+  Future<void> loadProfileAwards({
+    required String tripId,
+  }) async {
+    if (_isDisposed) return;
 
-  final awardsViewModel = StoryTripAwardsViewModel(
-    tripId: tripId,
-  );
+    final awardsViewModel = StoryTripAwardsViewModel(
+      tripId: tripId,
+    );
 
-  await awardsViewModel.loadTripAwards();
+    await awardsViewModel.loadTripAwards();
 
-  if (_isDisposed) return;
+    if (_isDisposed) return;
 
-  _awards = awardsViewModel.awards;
-  notifyListeners();
-}
+    _awards = awardsViewModel.awards;
+    notifyListeners();
+  }
 
   void loadMockAwards() {
     _awards = [
       StoryTripAward(
         userId: '1',
-        username: 'teerada',
+        username: '@tiana',
         type: TripAwardType.earlyArrival,
         awardTitle: 'Early Bird',
         awardSubtitle: '',
@@ -145,7 +186,7 @@ class ProfileViewModel extends ChangeNotifier {
       ),
       StoryTripAward(
         userId: '1',
-        username: 'teerada',
+        username: '@tiana',
         type: TripAwardType.food,
         awardTitle: 'Foodie Supreme',
         awardSubtitle: '',
@@ -154,7 +195,7 @@ class ProfileViewModel extends ChangeNotifier {
       ),
       StoryTripAward(
         userId: '1',
-        username: 'teerada',
+        username: '@tiana',
         type: TripAwardType.sightseeing,
         awardTitle: 'Explorer Mode',
         awardSubtitle: '',

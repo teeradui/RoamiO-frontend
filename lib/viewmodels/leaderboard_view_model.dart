@@ -39,8 +39,8 @@ class LeaderboardViewModel extends ChangeNotifier {
   final List<LeaderboardUser> _users = [
     const LeaderboardUser(
       userId: '1',
-      name: 'Teedy',
-      username: '@teedy',
+      name: 'Tiana',
+      username: '@tiana',
       profileImageUrl:
           'https://i.pinimg.com/736x/8e/d3/49/8ed349e7e3e46319c775edf070887e13.jpg',
       reliabilityScore: 367,

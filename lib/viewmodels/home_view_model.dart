@@ -16,7 +16,7 @@ class HomeViewModel extends ChangeNotifier {
   final TripService _tripService;
   final TripMemberService _tripMemberService;
 
-  final _userName = 'Teedy';
+  final _userName = 'Tiana';
 
   String get userName => _userName;
 
