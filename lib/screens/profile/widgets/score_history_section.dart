@@ -29,14 +29,33 @@ class _ScoreHistoryContent extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Score History',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Row(
+  children: [
+    ShaderMask(
+      shaderCallback: (bounds) {
+        return const LinearGradient(
+          colors: AppColors.gradientUpAc,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(bounds);
+      },
+      child: const Icon(
+        MingCuteIcons.mgc_chart_vertical_line,
+        color: Colors.white,
+        size: 21,
+      ),
+    ),
+    const SizedBox(width: 7),
+    const Text(
+      'Score History',
+      style: TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  ],
+),
 
             const SizedBox(height: 4),
 

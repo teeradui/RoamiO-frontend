@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:roamio_frontend/screens/profile/widgets/profile_awards_section.dart';
+import 'package:roamio_frontend/screens/profile/widgets/scoring_rule.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 
 class ProfileReliabilityCard extends StatelessWidget {
@@ -32,7 +33,6 @@ class ProfileReliabilityCard extends StatelessWidget {
   final int joined;
   final int attended;
   final int attendanceRate;
-  
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +56,8 @@ class ProfileReliabilityCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          _buildReliabilityScoreBox(),
+          _buildReliabilityScoreBox(context),
         ],
-        
       ),
     );
   }
@@ -120,7 +119,7 @@ class ProfileReliabilityCard extends StatelessWidget {
     );
   }
 
-  Widget _buildReliabilityScoreBox() {
+  Widget _buildReliabilityScoreBox(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
@@ -128,76 +127,92 @@ class ProfileReliabilityCard extends StatelessWidget {
         color: const Color(0xFFF8F0D9),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          // Title
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          Column(
             children: [
-              Icon(
-                MingCuteIcons.mgc_medal_line,
-                color: AppColors.textPrimary,
-                size: 16,
+              // Title
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    MingCuteIcons.mgc_medal_line,
+                    color: AppColors.textPrimary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 5),
+                  const Text(
+                    'Reliability Credit Score',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 5),
-              const Text(
-                'Reliability Credit Score',
+
+              const SizedBox(height: 5),
+
+              // Score
+              Text(
+                '$score',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  color: score >= 200
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFD9534F),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
+
+              const SizedBox(height: 2),
+
+              // Reliability title
+              Text(
+                '"$reliabilityTitle"',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Starting score
+              const Text(
+                'Starting score: 200',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              _buildScoreBar(),
+
+              const SizedBox(height: 10),
+
+              _buildStatistics(),
             ],
           ),
 
-          const SizedBox(height: 5),
-
-          // Score
-          Text(
-            '$score',
-            style: TextStyle(
-              color: score >= 200
-                  ? const Color(0xFF4CAF50)
-                  : const Color(0xFFD9534F),
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
+          // Info button
+          Positioned(
+            top: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: () => _showScoringRules(context),
+              child: const Icon(
+                MingCuteIcons.mgc_information_line,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
-
-          const SizedBox(height: 2),
-
-          // Reliability title
-          Text(
-            '"$reliabilityTitle"',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Starting score
-          const Text(
-            'Starting score: 200',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Score bar
-          _buildScoreBar(),
-
-          const SizedBox(height: 10),
-
-          // Statistics
-          _buildStatistics(),
         ],
       ),
     );
@@ -285,6 +300,40 @@ class ProfileReliabilityCard extends StatelessWidget {
         fontSize: 12,
         fontWeight: FontWeight.w600,
       ),
+    );
+  }
+
+  void _showScoringRules(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 30,
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 650),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            decoration: BoxDecoration(
+              color: AppColors.bgPrimary,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: SingleChildScrollView(child: ScoringRuleContent()),
+                ),
+
+               
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

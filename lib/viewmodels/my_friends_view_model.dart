@@ -29,28 +29,39 @@ class MyFriendsViewModel extends ChangeNotifier {
   FriendListErrorType? _errorType;
 
   final List<FriendItem> _friends = [
-    FriendItem(
-      userId: '1',
-      name: 'Mina',
-      username: '@mina',
-      profileImageUrl: null,
+  FriendItem(
+    userId: '1',
+    name: 'Mina',
+    username: '@mina',
+    profileImageUrl:
+        'https://i.pinimg.com/736x/09/9b/f0/099bf067f08cbc40e4d7365815af7731.jpg',
+    reliabilityScore: 245,
+  ),
+  FriendItem(
+    userId: '2',
+    name: 'Jane',
+    username: '@jane',
+    profileImageUrl:
+        'https://i.pinimg.com/736x/a2/cd/d7/a2cdd73dc8ffd68ea2a6faa703431d28.jpg',
+    reliabilityScore: 190,
+  ),
+  FriendItem(
+    userId: '3',
+    name: 'Mark',
+    username: '@mark',
+    profileImageUrl:
+        'https://i.pinimg.com/1200x/93/95/ea/9395ea5873de39c9b1f154680e8e10dc.jpg',
+    reliabilityScore: 200,
+  ),
+
+  const FriendItem(
+      userId: '10',
+      name: 'Alice',
+      username: '@alice',
+      profileImageUrl: 'https://i.pinimg.com/736x/b9/7a/7c/b97a7cdd20f7b616d6b7cb6ae6f2c719.jpg',
       reliabilityScore: 285,
     ),
-    FriendItem(
-      userId: '2',
-      name: 'Jane',
-      username: '@jane',
-      profileImageUrl: null,
-      reliabilityScore: 190,
-    ),
-    FriendItem(
-      userId: '3',
-      name: 'Mark',
-      username: '@mark',
-      profileImageUrl: null,
-      reliabilityScore: 200,
-    ),
-  ];
+];
 
   String? get errorMessage {
     switch (_errorType) {

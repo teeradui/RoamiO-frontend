@@ -82,7 +82,7 @@ class _FriendScreenViewState extends State<_FriendScreenView> {
         }
       },
       icon: const Icon(
-        MingCuteIcons.mgc_user_add_fill,
+        MingCuteIcons.mgc_user_add_2_line,
         color: AppColors.btnPrimary,
         size: 24,
       ),

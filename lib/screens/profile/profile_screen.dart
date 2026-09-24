@@ -256,9 +256,7 @@ class _ProfileView extends StatelessWidget {
                       return Column(
                         children: [
                           ProfileReliabilityCard(
-                            profileImage: const AssetImage(
-                              'assets/images/default_profile.png',
-                            ),
+                            profileImage: NetworkImage(viewModel.profileImage),
                             name: viewModel.name,
                             username: viewModel.username,
                             tripsCompleted: viewModel.tripsCompleted,
@@ -278,10 +276,6 @@ class _ProfileView extends StatelessWidget {
                           const ScoreHistorySection(),
 
                           const SizedBox(height: 5),
-
-                          const ScoringRuleContent(),
-
-                          const SizedBox(height: 15),
                         ],
                       );
                     },

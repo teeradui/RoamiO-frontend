@@ -93,7 +93,7 @@ class _LeaderboardContentState extends State<_LeaderboardContent>
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 45, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                   child: _buildHeaderAnimation(),
                 ),
 
@@ -355,7 +355,9 @@ class _LeaderboardContentState extends State<_LeaderboardContent>
                 backgroundColor: Colors.white,
                 child: CircleAvatar(
                   radius: isFirst ? 32 : 31,
-                  backgroundImage: AssetImage(user.profileImagePath),
+                  backgroundImage: user.profileImageUrl != null
+                      ? NetworkImage(user.profileImageUrl!)
+                      : const AssetImage('assets/images/default_profile.png'),
                 ),
               ),
 
@@ -707,8 +709,10 @@ class _LeaderboardContentState extends State<_LeaderboardContent>
           const SizedBox(width: 10),
 
           CircleAvatar(
-            radius: 22,
-            backgroundImage: AssetImage(user.profileImagePath),
+            radius: 25,
+            backgroundImage: user.profileImageUrl != null
+                ? NetworkImage(user.profileImageUrl!)
+                : const AssetImage('assets/images/default_profile.png'),
           ),
 
           const SizedBox(width: 10),

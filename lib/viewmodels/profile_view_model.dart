@@ -8,9 +8,18 @@ class ProfileViewModel extends ChangeNotifier {
     loadProfileAwards(tripId: '1');
   }
 
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
   // Profile information
-  String _name = 'Teerada Bun-in';
-  String _username = 'teerada';
+  String _name = 'Teedy';
+  String _username = 'teeradui';
+  String _profileImage = 'https://i.pinimg.com/736x/8e/d3/49/8ed349e7e3e46319c775edf070887e13.jpg';
 
   // Trip statistics
   int _tripsCompleted = 12;
@@ -18,10 +27,11 @@ class ProfileViewModel extends ChangeNotifier {
   int _attended = 12;
 
   // Reliability Credit Score
-  int _reliabilityScore = 235;
+  int _reliabilityScore = 367;
 
   String get name => _name;
   String get username => _username;
+  String get profileImage => _profileImage;
 
   int get tripsCompleted => _tripsCompleted;
   int get joined => _joined;
@@ -91,9 +101,9 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   void openSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
   }
 
   List<StoryTripAward> _awards = [];
@@ -108,14 +118,19 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> loadProfileAwards({required String tripId}) async {
-    final awardsViewModel = StoryTripAwardsViewModel(tripId: tripId);
+  if (_isDisposed) return;
 
-    await awardsViewModel.loadTripAwards();
+  final awardsViewModel = StoryTripAwardsViewModel(
+    tripId: tripId,
+  );
 
-    _awards = awardsViewModel.awards;
+  await awardsViewModel.loadTripAwards();
 
-    notifyListeners();
-  }
+  if (_isDisposed) return;
+
+  _awards = awardsViewModel.awards;
+  notifyListeners();
+}
 
   void loadMockAwards() {
     _awards = [

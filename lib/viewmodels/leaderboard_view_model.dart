@@ -6,7 +6,7 @@ class LeaderboardUser {
   final String userId;
   final String name;
   final String username;
-  final String profileImagePath;
+  final String? profileImageUrl;
   final int reliabilityScore;
   final String? title;
 
@@ -14,7 +14,7 @@ class LeaderboardUser {
     required this.userId,
     required this.name,
     required this.username,
-    required this.profileImagePath,
+    this.profileImageUrl,
     required this.reliabilityScore,
     this.title,
   });
@@ -41,39 +41,44 @@ class LeaderboardViewModel extends ChangeNotifier {
       userId: '1',
       name: 'Teedy',
       username: '@teedy',
-      profileImagePath: 'assets/images/default_profile.png',
-      reliabilityScore: 267,
+      profileImageUrl:
+          'https://i.pinimg.com/736x/8e/d3/49/8ed349e7e3e46319c775edf070887e13.jpg',
+      reliabilityScore: 367,
       title: 'Reliability Rockstar!',
     ),
     const LeaderboardUser(
       userId: '2',
-      name: 'Cherry',
-      username: '@cherry',
-      profileImagePath: 'assets/images/default_profile.png',
-      reliabilityScore: 253,
+      name: 'Jane',
+      username: '@jane',
+      profileImageUrl:
+          'https://i.pinimg.com/736x/a2/cd/d7/a2cdd73dc8ffd68ea2a6faa703431d28.jpg',
+      reliabilityScore: 190,
       title: 'Trust Superstar!',
     ),
     const LeaderboardUser(
       userId: '3',
-      name: 'Luna',
-      username: '@luna',
-      profileImagePath: 'assets/images/default_profile.png',
-      reliabilityScore: 248,
+      name: 'Mark',
+      username: '@mark',
+      profileImageUrl:
+          'https://i.pinimg.com/1200x/93/95/ea/9395ea5873de39c9b1f154680e8e10dc.jpg',
+      reliabilityScore: 200,
       title: 'Consistency Star!',
     ),
     const LeaderboardUser(
       userId: '4',
-      name: 'Ashly',
-      username: '@ashly',
-      profileImagePath: 'assets/images/default_profile.png',
-      reliabilityScore: 232,
+      name: 'Alice',
+      username: '@alice',
+      profileImageUrl:
+          'https://i.pinimg.com/736x/b9/7a/7c/b97a7cdd20f7b616d6b7cb6ae6f2c719.jpg',
+      reliabilityScore: 285,
     ),
     const LeaderboardUser(
       userId: '5',
-      name: 'Selena',
-      username: '@selena',
-      profileImagePath: 'assets/images/default_profile.png',
-      reliabilityScore: 189,
+      name: 'Mina',
+      username: '@mina',
+      profileImageUrl:
+          'https://i.pinimg.com/736x/09/9b/f0/099bf067f08cbc40e4d7365815af7731.jpg',
+      reliabilityScore: 245,
     ),
   ];
 
@@ -103,7 +108,7 @@ class LeaderboardViewModel extends ChangeNotifier {
     try {
       // TODO: Load leaderboard from backend later.
       await Future.delayed(const Duration(milliseconds: 300));
-      // TODO: Load leaderboard from backend later.
+
       // Keep current mock leaderboard data.
       notifyListeners();
     } catch (e) {

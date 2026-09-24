@@ -4,7 +4,9 @@ import 'package:roamio_frontend/screens/notification/notification_screen.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 
 class HomeHeader extends StatelessWidget {
-  const HomeHeader({super.key});
+  const HomeHeader({super.key, required this.userName});
+
+  final String userName;
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +17,9 @@ class HomeHeader extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Welcome, [UserName]!',
-              style: TextStyle(
+            Text(
+              'Welcome, $userName!',
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textSecondary,

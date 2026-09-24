@@ -132,32 +132,45 @@ class ScoringRuleContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          children: [
-            ShaderMask(
-              shaderCallback: (bounds) {
-                return const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: AppColors.gradientMap,
-                ).createShader(bounds);
-              },
-              child: const Icon(
-                MingCuteIcons.mgc_inventory_fill,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Scoring Rules',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    ShaderMask(
+      shaderCallback: (bounds) {
+        return const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: AppColors.gradientMap,
+        ).createShader(bounds);
+      },
+      child: const Icon(
+        MingCuteIcons.mgc_inventory_fill,
+        color: Colors.white,
+        size: 22,
+      ),
+    ),
+    const SizedBox(width: 8),
+    const Expanded(
+      child: Text(
+        'Scoring Rules',
+        style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
         ),
+      ),
+    ),
+    IconButton(
+      onPressed: () => Navigator.pop(context),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+      icon: const Icon(
+        MingCuteIcons.mgc_close_line,
+        size: 22,
+        color: AppColors.textSecondary,
+      ),
+    ),
+  ],
+),
 
         const SizedBox(height: 6),
 

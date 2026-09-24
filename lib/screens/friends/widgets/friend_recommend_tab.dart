@@ -106,7 +106,7 @@ class _FriendRecommendContent extends StatelessWidget {
         }
       },
       icon: const Icon(
-        MingCuteIcons.mgc_user_add_fill,
+        MingCuteIcons.mgc_user_add_2_line,
         color: AppColors.btnPrimary,
         size: 24,
       ),

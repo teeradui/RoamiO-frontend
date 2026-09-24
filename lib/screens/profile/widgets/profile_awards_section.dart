@@ -60,27 +60,35 @@ class ProfileAwardsSection extends StatelessWidget {
 
         // การ์ด
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-          decoration: BoxDecoration(
-            color: AppColors.bgCard,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: awards.map((award) {
-              return _buildAwardItem(award);
-            }).toList(),
-          ),
-        ),
+  width: double.infinity,
+  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+  decoration: BoxDecoration(
+    color: AppColors.bgCard,
+    borderRadius: BorderRadius.circular(24),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.08),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: SingleChildScrollView(
+  scrollDirection: Axis.horizontal,
+  child: ConstrainedBox(
+    constraints: BoxConstraints(
+      minWidth: MediaQuery.of(context).size.width - 40,
+    ),
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: awards.map((award) {
+        return _buildAwardItem(award);
+      }).toList(),
+      ),
+    ),
+  ),
+),
       ],
     );
   }

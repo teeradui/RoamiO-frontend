@@ -16,6 +16,12 @@ class HomeViewModel extends ChangeNotifier {
   final TripService _tripService;
   final TripMemberService _tripMemberService;
 
+  final _userName = 'Teedy';
+
+  String get userName => _userName;
+
+  bool _isDisposed = false;
+
   TripFilter selectedFilter = TripFilter.all;
 
   List<TripCardViewModel> trips = [];
@@ -104,6 +110,8 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> loadTrips({bool forceRefresh = false}) async {
+    if (_isDisposed) return;
+
     isLoading = true;
     errorMessage = null;
     notifyListeners();
@@ -117,6 +125,8 @@ class HomeViewModel extends ChangeNotifier {
         _tripService.getActiveTrips(forceRefresh: forceRefresh),
         _tripService.getCompletedTrips(forceRefresh: forceRefresh),
       ]);
+
+      if (_isDisposed) return;
 
       final allTrips = <trip_model.Trip>[
         ...results[0],
@@ -145,21 +155,27 @@ class HomeViewModel extends ChangeNotifier {
         ),
       );
 
+      if (_isDisposed) return;
+
       for (final trip in trips) {
-  debugPrint(
-    'TRIP CARD: '
-    'tripId=${trip.tripId}, '
-    'tripName=${trip.tripName}, '
-    'startDate=${trip.startDate}, '
-    'destination=${trip.tripDestination}',
-  );
-}
+        debugPrint(
+          'TRIP CARD: '
+          'tripId=${trip.tripId}, '
+          'tripName=${trip.tripName}, '
+          'startDate=${trip.startDate}, '
+          'destination=${trip.tripDestination}',
+        );
+      }
     } catch (error, stackTrace) {
       debugPrint('LOAD HOME TRIPS ERROR: $error');
       debugPrintStack(stackTrace: stackTrace);
 
+      if (_isDisposed) return;
+
       errorMessage = 'Unable to load trips.';
     } finally {
+      if (_isDisposed) return;
+
       isLoading = false;
       notifyListeners();
     }
@@ -209,5 +225,11 @@ class HomeViewModel extends ChangeNotifier {
 
     selectedFilter = filter;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 }

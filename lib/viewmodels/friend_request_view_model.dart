@@ -12,7 +12,7 @@ class FriendRequestViewModel extends ChangeNotifier {
       userId: '7',
       name: 'Emma',
       username: '@emma',
-      profileImageUrl: null,
+      profileImageUrl: 'https://i.pinimg.com/736x/55/44/9a/55449a9cc139295fe71d06179aee4d01.jpg',
       reliabilityScore: 275,
       requestTime: DateTime.now(),
     ),
@@ -20,7 +20,7 @@ class FriendRequestViewModel extends ChangeNotifier {
       userId: '8',
       name: 'James',
       username: '@james',
-      profileImageUrl: null,
+      profileImageUrl: 'https://i.pinimg.com/736x/78/bb/21/78bb21c4f3089c633f1a40d0af713e25.jpg',
       reliabilityScore: 240,
       requestTime: DateTime.now().subtract(
         const Duration(minutes: 1),
@@ -30,7 +30,7 @@ class FriendRequestViewModel extends ChangeNotifier {
       userId: '9',
       name: 'Sophie',
       username: '@sophie',
-      profileImageUrl: null,
+      profileImageUrl: 'https://i.pinimg.com/736x/2f/80/88/2f80886e63251de232d3abcfe1944912.jpg',
       reliabilityScore: 290,
       requestTime: DateTime.now().subtract(
         const Duration(days: 2),

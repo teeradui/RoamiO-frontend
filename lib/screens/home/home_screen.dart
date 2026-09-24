@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     viewModel.dispose();
+
     super.dispose();
   }
 
@@ -69,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const HomeHeader(),
+                    HomeHeader(userName: viewModel.userName),
                     const SizedBox(height: 16),
 
                     TripFilterBar(
