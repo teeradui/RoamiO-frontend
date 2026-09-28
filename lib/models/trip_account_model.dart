@@ -54,3 +54,59 @@ double? _parseDouble(dynamic value) {
   if (value is num) return value.toDouble();
   return double.tryParse(value.toString());
 }
+
+DateTime? _parseDateTime(dynamic value) {
+  if (value == null) return null;
+  final text = value.toString().trim();
+  if (text.isEmpty) return null;
+  return DateTime.tryParse(text);
+}
+
+
+enum ReliabilityAttendance { early, onTime, late, veryLate, missing }
+
+ReliabilityAttendance _attendanceFromString(String? value) {
+  switch (value) {
+    case 'VeryEarly':
+      return ReliabilityAttendance.early;
+    case 'Early':
+      return ReliabilityAttendance.early;
+    case 'OnTime':
+      return ReliabilityAttendance.onTime;
+    case 'Late':
+      return ReliabilityAttendance.late;
+    case 'VeryLate':
+      return ReliabilityAttendance.veryLate;
+    case 'undecided':
+      return ReliabilityAttendance.missing;
+    case 'Missing':
+    default:
+      return ReliabilityAttendance.missing;
+  }
+}
+
+class AccountTrip {
+  const AccountTrip({
+    required this.userId,
+    required this.tripId,
+    required this.tripName,
+    required this.startTime,
+    required this.attendance,
+  });
+
+  final String userId;
+  final String tripId;
+  final String tripName;
+  final DateTime? startTime;
+  final ReliabilityAttendance attendance;
+
+  factory AccountTrip.fromJson(Map<String, dynamic> json) {
+    return AccountTrip(
+      userId: json['userId']?.toString() ?? json['user_id']?.toString() ?? '',
+      tripId: json['tripId']?.toString() ?? json['trip_id']?.toString() ?? '',
+      tripName: json['tripName']?.toString() ?? json['trip_name']?.toString() ?? '',
+      startTime: _parseDateTime(json['acStartTime'] ?? json['ac_start_time']),
+      attendance: _attendanceFromString(json['attendance']?.toString()),
+    );
+  }
+}

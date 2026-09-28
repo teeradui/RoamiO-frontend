@@ -130,4 +130,47 @@ class TripFriendRepository {
     final decoded = jsonDecode(response.body);
     return TripFriendRequest.fromJson(decoded['updatedRequest'] as Map<String, dynamic>);
   }
+
+  Future<List<RecommendedFriend>> getRecommendedFriends(String userId, {int limit = 10,}) async {
+    final uri = Uri.parse(
+      '${ApiConfig.friends}/recommendations?userId=$userId&limit=$limit',
+    );
+
+    // TODO: add soon — should include AuthHeaders once JWT auth exists.
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load recommended friends (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+    return data
+        .map((e) => RecommendedFriend.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<RecommendedFriend>> searchUsers(String userId, String query) async {
+    final uri = Uri.parse('${ApiConfig.friends}/search').replace(
+      queryParameters: {
+        'userId': userId,
+        'q': query,
+      },
+    );
+
+    // TODO: add soon — should include AuthHeaders once JWT auth exists.
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to search users (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+    return data
+        .map((e) => RecommendedFriend.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 }

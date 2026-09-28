@@ -112,4 +112,20 @@ class TripAccountRepository {
     final decoded = jsonDecode(response.body);
     return TripAccount.fromJson(decoded['account'] as Map<String, dynamic>);
   }
-}
+
+  Future<List<AccountTrip>> getAccountTrips(String userId) async {
+    final uri = Uri.parse('$_base/$userId/trips');
+
+    // TODO: add soon — should require AuthHeaders once JWT auth exists.
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load accounts trips (${response.statusCode}): ${response.body}',
+      );
+    }
+    
+    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+    return data.map((e) => AccountTrip.fromJson(e as Map<String, dynamic>)).toList();
+  }
+  }
