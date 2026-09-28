@@ -57,9 +57,7 @@ class MapSectionViewModel extends ChangeNotifier {
     apiKey: LocationService.googleApiKey,
   );
 
-  static const LatLng _defaultMapCenter = LatLng(18.7883, 98.9853);
-
-  LatLng mapCenter = _defaultMapCenter;
+  LatLng? mapCenter;
 
   List<MemberMapLocation> members = [];
   List<VisitedPlaceMapPoint> visitedPlaces = [];
@@ -352,25 +350,25 @@ class MapSectionViewModel extends ChangeNotifier {
   }
 
   void _updateMapCenter() {
-    if (isCompleted && routePoints.isNotEmpty) {
-      mapCenter = routePoints.first;
-      return;
-    }
-
-    if (members.isNotEmpty) {
-      mapCenter = members.first.location;
-      return;
-    }
-
-    if (visitedPlaces.isNotEmpty) {
-      mapCenter = visitedPlaces.first.location;
-      return;
-    }
-
-    if (routePoints.isNotEmpty) {
-      mapCenter = routePoints.first;
-    }
+  if (isCompleted && routePoints.isNotEmpty) {
+    mapCenter = routePoints.first;
+    return;
   }
+
+  if (members.isNotEmpty) {
+    mapCenter = members.first.location;
+    return;
+  }
+
+  if (visitedPlaces.isNotEmpty) {
+    mapCenter = visitedPlaces.first.location;
+    return;
+  }
+
+  if (routePoints.isNotEmpty) {
+    mapCenter = routePoints.first;
+  }
+}
 
   bool _isValidCoordinate(double latitude, double longitude) {
     if (latitude == 0 && longitude == 0) {

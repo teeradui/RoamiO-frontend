@@ -6,6 +6,7 @@ import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/map_section_view_model.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
+import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
 class MapSection extends StatefulWidget {
   const MapSection({super.key, required this.tripId, required this.tripStatus});
@@ -37,9 +38,19 @@ class _MapSectionState extends State<MapSection> {
   }
 
   Future<void> _handleViewModelChanged() async {
-    if (!mounted || viewModel.isLoading) return;
+    if (!mounted) return;
 
     await _createMapMarkers();
+
+    if (!mounted || mapController == null || viewModel.mapCenter == null) {
+      return;
+    }
+
+    await mapController!.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: viewModel.mapCenter!, zoom: 13),
+      ),
+    );
   }
 
   Future<void> _createMapMarkers() async {
@@ -215,20 +226,27 @@ class _MapSectionState extends State<MapSection> {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: viewModel.mapCenter,
-                  zoom: 13,
-                ),
-                onMapCreated: (controller) {
-                  mapController = controller;
-                },
-                markers: viewModel.visitedPlaceMarkers,
-                polylines: viewModel.routePolylines,
-                zoomControlsEnabled: true,
-                myLocationButtonEnabled: false,
-                compassEnabled: false,
-              ),
+              child: viewModel.mapCenter == null
+                  ? const _MapLoadingIndicator()
+                  : GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: viewModel.mapCenter!,
+                        zoom: 13,
+                      ),
+                      onMapCreated: (controller) {
+                        mapController = controller;
+                      },
+                      markers: markers,
+                      polylines: viewModel.routePolylines,
+                      scrollGesturesEnabled: true,
+                      zoomGesturesEnabled: true,
+                      rotateGesturesEnabled: true,
+                      tiltGesturesEnabled: true,
+
+                      zoomControlsEnabled: true,
+                      myLocationButtonEnabled: false,
+                      compassEnabled: false,
+                    ),
             ),
 
             const SizedBox(height: 14),
@@ -378,6 +396,110 @@ class _VisitedPlaceTimelineTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MapLoadingIndicator extends StatefulWidget {
+  const _MapLoadingIndicator();
+
+  @override
+  State<_MapLoadingIndicator> createState() => _MapLoadingIndicatorState();
+}
+
+class _MapLoadingIndicatorState extends State<_MapLoadingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.bgCard,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final progress = Curves.easeInOut.transform(_controller.value);
+
+              return SizedBox(
+                width: 110,
+                height: 42,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 15,
+                      right: 15,
+                      bottom: 7,
+                      child: Container(
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: AppColors.stepActive.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 19,
+                      right: 19,
+                      bottom: 7,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(
+                          5,
+                          (_) => Container(
+                            width: 5,
+                            height: 1,
+                            color: AppColors.stepActive.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: progress * 68,
+                      top: 0,
+                      child: const Icon(
+                        TablerIcons.carSuvFilled,
+                        size: 24,
+                        color: AppColors.stepActive,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 8),
+
+          const Text(
+            'Loading map...',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
