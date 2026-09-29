@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:roamio_frontend/models/services/location_service.dart';
 import 'package:roamio_frontend/theme/colors.dart';
+import 'package:roamio_frontend/theme/map_styles.dart';
 import 'package:roamio_frontend/viewmodels/meeting_point_view_model.dart';
 
 class MeetingPointScreen extends StatefulWidget {
@@ -14,6 +15,8 @@ class MeetingPointScreen extends StatefulWidget {
 class _MeetingPointScreenState extends State<MeetingPointScreen> {
   final TextEditingController searchController = TextEditingController();
   GoogleMapController? mapController;
+
+  
 
   late final MeetingPointViewModel viewModel;
 
@@ -157,6 +160,7 @@ class _MeetingPointScreenState extends State<MeetingPointScreen> {
                       top: Radius.circular(24),
                     ),
                     child: GoogleMap(
+                      style: MapStyles.retro,
                       initialCameraPosition: CameraPosition(
                         target: viewModel.selectedLocation,
                         zoom: 14,

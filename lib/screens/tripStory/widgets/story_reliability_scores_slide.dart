@@ -290,6 +290,9 @@ class _ReliabilityMemberCard extends StatelessWidget {
     final progressStart = 0.28 + (animationIndex * 0.08);
     final progressEnd = (progressStart + 0.25).clamp(0.0, 1.0);
 
+    final scoreChangeColor =
+    member.scoreChange > 0 ? AppColors.green : AppColors.red;
+
     final progressAnimation = CurvedAnimation(
       parent: animationController,
       curve: Interval(
@@ -434,15 +437,13 @@ class _ReliabilityMemberCard extends StatelessWidget {
                   Icon(
                     viewModel.getScoreChangeIcon(member.scoreChange),
                     size: 15,
-                    color: scoreColor,
+                    color: scoreChangeColor,
                   ),
-
                   const SizedBox(width: 2),
-
                   Text(
                     viewModel.formatScoreChange(member.scoreChange),
                     style: TextStyle(
-                      color: scoreColor,
+                      color: scoreChangeColor,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),

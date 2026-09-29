@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:lottie/lottie.dart';
 import 'package:confetti/confetti.dart';
 import 'package:roamio_frontend/theme/colors.dart';
+import 'package:roamio_frontend/theme/map_styles.dart';
 import 'package:roamio_frontend/viewmodels/story_trip_roadmap_view_model.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
 
@@ -314,6 +315,7 @@ class _StoryTripRoadmapSlideState extends State<StoryTripRoadmapSlide>
                           children: [
                             Positioned.fill(
                               child: GoogleMap(
+                                style: MapStyles.retro,
                                 initialCameraPosition: CameraPosition(
                                   target: viewModel.initialCameraTarget,
                                   zoom: 13.5,
