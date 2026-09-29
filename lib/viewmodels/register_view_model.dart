@@ -1,8 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:roamio_frontend/models/services/trip_account_service.dart';
 
 class RegisterViewModel extends ChangeNotifier {
+  RegisterViewModel({TripAccountService? tripAccountService})
+      : _tripAccountService = tripAccountService ?? TripAccountService();
+
+  final TripAccountService _tripAccountService;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -35,17 +41,19 @@ class RegisterViewModel extends ChangeNotifier {
     notifyListeners();
 
     _usernameDebounce = Timer(const Duration(milliseconds: 500), () async {
-      // TODO: Replace with real API call later.
-      //
-      // final isTaken =
-      //     await authService.checkUsername('@$value');
+      try {
+        final isTaken = await _tripAccountService.checkUsernameTaken(
+          _formatUsername(value),
+        );
 
-      // Temporary: no DB yet, so assume username is available.
-      final isTaken = false;
+        _usernameError = isTaken ? 'This username is already taken.' : null;
+      } catch (error, stackTrace) {
+        debugPrint('CHECK USERNAME ERROR: $error');
+        debugPrintStack(stackTrace: stackTrace);
 
-      if (isTaken) {
-        _usernameError = 'This username is already taken.';
-      } else {
+        // Fail open: don't block registration on a network hiccup during
+        // a live-typing check. The real uniqueness constraint is still
+        // enforced server-side when createAccount is submitted.
         _usernameError = null;
       }
 
@@ -91,17 +99,15 @@ class RegisterViewModel extends ChangeNotifier {
     notifyListeners();
 
     _emailDebounce = Timer(const Duration(milliseconds: 500), () async {
-      // TODO: Replace with real API call later.
-      //
-      // final isRegistered =
-      //     await authService.checkEmail(value);
+      try {
+        final isTaken = await _tripAccountService.checkEmailTaken(value);
 
-      // Temporary: no DB yet, so assume email is available.
-      final isRegistered = false;
+        _emailError = isTaken ? 'This email is already registered.' : null;
+      } catch (error, stackTrace) {
+        debugPrint('CHECK EMAIL ERROR: $error');
+        debugPrintStack(stackTrace: stackTrace);
 
-      if (isRegistered) {
-        _emailError = 'This email is already registered.';
-      } else {
+        // Fail open — same reasoning as checkUsername.
         _emailError = null;
       }
 
@@ -143,17 +149,26 @@ class RegisterViewModel extends ChangeNotifier {
       debugPrint('Profile picture: $profilePicturePath');
       debugPrint('==============================');
 
-      // Mock registration until backend is connected.
-      await Future.delayed(const Duration(seconds: 1));
+      await _tripAccountService.createAccount(
+        firstName: name.trim(),
+        username: formattedUsername,
+        email: email,
+        password: password,
+        profilePicture: profilePicturePath != null ? File(profilePicturePath) : null,
+      );
 
       _isLoading = false;
       notifyListeners();
 
       return true;
-    } catch (e) {
+    } catch (error, stackTrace) {
+      debugPrint('REGISTER ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
       _isLoading = false;
       _errorMessage = 'Unable to create your account. Please try again.';
       notifyListeners();
+
       return false;
     }
   }

@@ -124,11 +124,8 @@ class TripSummaryRepository {
     return TripSummary.fromJson(decoded['summary'] as Map<String, dynamic>);
   }
 
-  Future<ActivityGraphData> getActivityGraphData(
-    String tripId, {
-    String userId = '1',
-  }) async {
-    final uri = Uri.parse('${_base(tripId)}/activityGraphUser?userId=$userId');
+  Future<ActivityGraphData> getActivityGraphData(String tripId) async {
+    final uri = Uri.parse('${_base(tripId)}/activityGraphUser');
     final headers = await AuthHeaders.build();
     final response = await http.get(uri, headers: headers);
 
@@ -139,13 +136,11 @@ class TripSummaryRepository {
     }
 
     final decoded = jsonDecode(response.body);
-    return ActivityGraphData.fromJson(
-      decoded['graphData'] as Map<String, dynamic>,
-    );
+    return ActivityGraphData.fromJson(decoded['graphData'] as Map<String, dynamic>);
   }
 
-  Future<StoryData> getStoryData(String tripId, {String userId = '1'}) async {
-    final uri = Uri.parse('${_base(tripId)}/story?userId=$userId');
+  Future<StoryData> getStoryData(String tripId) async {
+    final uri = Uri.parse('${_base(tripId)}/story');
     final headers = await AuthHeaders.build();
     final response = await http.get(uri, headers: headers);
 
