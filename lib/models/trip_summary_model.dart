@@ -373,12 +373,14 @@ class TripMemberReliability {
     required this.username,
     required this.attendance,
     required this.currentScore,
+    this.profilePicture,
   });
 
   final String userId;
   final String username;
   final ReliabilityAttendance attendance;
   final double currentScore;
+  final String? profilePicture;
 
   factory TripMemberReliability.fromJson(Map<String, dynamic> json) {
     return TripMemberReliability(
@@ -388,6 +390,7 @@ class TripMemberReliability {
         json['attendance']?.toString(),
       ),
       currentScore: _parseDouble(json['reliabilityScore'] ?? json['reliability_score']) ?? 200,
+      profilePicture: json['profilePicture']?.toString() ?? json['profile_picture_url']?.toString(),
     );
   }
 }

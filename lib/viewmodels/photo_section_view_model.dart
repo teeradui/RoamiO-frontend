@@ -9,6 +9,8 @@ import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 import 'package:roamio_frontend/models/services/trip_summary_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:roamio_frontend/models/services/photo_album_service.dart';
+import 'package:roamio_frontend/models/trip_account_model.dart' hide TripStatus;
+import 'package:roamio_frontend/models/services/trip_account_service.dart';
 
 class TripPhotoItem {
   const TripPhotoItem({
@@ -67,14 +69,17 @@ class PhotoSectionViewModel extends ChangeNotifier {
     required this.tripEndDateTime,
     TripSummaryService? tripSummaryService,
     PhotoAlbumService? photoAlbumService,
+    TripAccountService? tripAccountService,
   }) : _tripSummaryService = tripSummaryService ?? TripSummaryService(),
-       _photoAlbumService = photoAlbumService ?? PhotoAlbumService() {
+       _photoAlbumService = photoAlbumService ?? PhotoAlbumService(), 
+       _tripAccountService = tripAccountService ?? TripAccountService() {
     selectedAlbumName = _selectedAlbumNameCache[tripId] ?? '';
     selectedAlbumId = _selectedAlbumIdCache[tripId];
   }
 
   final TripSummaryService _tripSummaryService;
   final PhotoAlbumService _photoAlbumService;
+  final TripAccountService _tripAccountService;
   final String tripId;
   final TripStatus tripStatus;
   final DateTime? tripStartDateTime;
@@ -547,7 +552,36 @@ class PhotoSectionViewModel extends ChangeNotifier {
     try {
       final fetchedPhotos = await _tripSummaryService.getPhotos(tripId);
 
+      // Look up each photo owner's account (username/avatar) in parallel.
+      final uniqueUserIds = fetchedPhotos
+          .map((p) => p.userId)
+          .whereType<String>()
+          .toSet()
+          .toList();
+
+      final accountResults = await Future.wait(
+        uniqueUserIds.map((userId) async {
+          try {
+            return await _tripAccountService.getAccountById(userId);
+          } catch (error) {
+            debugPrint('LOAD PHOTO OWNER ACCOUNT ERROR ($userId): $error');
+            return null;
+          }
+        }),
+      );
+
+      final accountsByUserId = <String, TripAccount>{};
+      for (var i = 0; i < uniqueUserIds.length; i++) {
+        final account = accountResults[i];
+        if (account != null) {
+          accountsByUserId[uniqueUserIds[i]] = account;
+        }
+      }
+
       photos = fetchedPhotos.map((photo) {
+        final userId = photo.userId ?? '';
+        final account = accountsByUserId[userId];
+
         return TripPhotoItem(
           id: photo.photoId,
           imageUrl: photo.photoUrl,
@@ -557,10 +591,10 @@ class PhotoSectionViewModel extends ChangeNotifier {
               photo.uploadedAt?.toLocal() ??
               DateTime.now(),
 
-          ownerUserId: photo.userId ?? '',
-          ownerUsername: photo.userId ?? 'Unknown',
+          ownerUserId: userId,
+          ownerUsername: account?.username ?? 'Unknown',
 
-          ownerProfileImageUrl: null,
+          ownerProfileImageUrl: account?.profilePicture,
 
           locationName: photo.locationName,
           latitude: photo.latitude,

@@ -34,4 +34,12 @@ class TripFriendService {
   Future<TripFriendRequest> updateRequestStatus(String requestId, RequestStatus status) {
     return _repo.updateRequestStatus(requestId, status);
   }
+
+  Future<List<RecommendedFriend>> getRecommendedFriends(String userId, {int limit = 10,}) {
+    return _repo.getRecommendedFriends(userId, limit: limit);
+  }
+
+  Future<List<RecommendedFriend>> searchUsers(String userId, String query) {
+    return _repo.searchUsers(userId, query);
+  }
 }

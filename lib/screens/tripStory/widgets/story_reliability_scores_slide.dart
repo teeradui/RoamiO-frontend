@@ -418,8 +418,8 @@ class _ReliabilityMemberCard extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  // '${member.currentScore}',
-                  'wip(add in feature1)',
+                  '${member.currentScore}',
+                  //'wip(add in feature1)',
                   style: TextStyle(
                     color: scoreColor,
                     fontSize: 14,

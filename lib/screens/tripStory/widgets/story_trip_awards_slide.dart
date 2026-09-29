@@ -5,6 +5,8 @@ import 'package:lottie/lottie.dart';
 import 'dart:async';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/story_trip_awards_view_model.dart';
+import 'package:roamio_frontend/models/trip_award_presets.dart';
+
 
 class StoryTripAwardsSlide extends StatefulWidget {
   const StoryTripAwardsSlide({super.key, required this.tripId});
@@ -237,8 +239,8 @@ class _StoryTripAwardsSlideState extends State<StoryTripAwardsSlide>
                   isCurrentUser: award.isCurrentUser,
                   child: _TripAwardCard(
                     award: award,
-                    awardColor: viewModel.getAwardColor(award.type),
-                    backgroundColor: viewModel.getAwardBackgroundColor(
+                    awardColor: getAwardColor(award.type),
+                    backgroundColor: getAwardBackgroundColor(
                       award.type,
                     ),
                   ),

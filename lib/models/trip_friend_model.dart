@@ -97,3 +97,35 @@ class TripFriendRequest {
     );
   }
 }
+
+class RecommendedFriend {
+  const RecommendedFriend({
+    required this.userId,
+    required this.firstName,
+    required this.lastName,
+    required this.username,
+    this.profilePicture,
+    required this.sharedTrips,
+  });
+
+  final String userId;
+  final String firstName;
+  final String lastName;
+  final String username;
+  final String? profilePicture;
+  final int sharedTrips;
+
+  factory RecommendedFriend.fromJson(Map<String, dynamic> json) {
+    final shared = json['sharedTrips'] ?? json['shared_trips'];
+
+    return RecommendedFriend(
+      userId: json['userId']?.toString() ?? json['user_id']?.toString() ?? '',
+      firstName: json['firstName']?.toString() ?? json['first_name']?.toString() ?? '',
+      lastName: json['lastName']?.toString() ?? json['last_name']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      profilePicture: json['profilePicture']?.toString() ??
+          json['profile_picture_url']?.toString(),
+      sharedTrips: shared is int ? shared : int.tryParse(shared.toString()) ?? 0,
+    );
+  }
+}

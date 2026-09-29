@@ -11,11 +11,11 @@ import '../trip_friend_model.dart';
 class TripFriendRepository {
   Future<TripFriendRequest> sendRequest(String senderId, String receiverId) async {
     final uri = Uri.parse('${ApiConfig.friends}/sendRequest');
+    final headers = await AuthHeaders.build();
 
-    // TODO: add soon — should include AuthHeaders once JWT auth exists.
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode({'senderId': senderId, 'receiverId': receiverId}),
     );
 
@@ -31,9 +31,9 @@ class TripFriendRepository {
 
   Future<TripFriend> getFriendById(String friendId) async {
     final uri = Uri.parse('${ApiConfig.friends}/friend/$friendId');
+    final headers = await AuthHeaders.build();
 
-    // TODO: add soon — should include AuthHeaders once JWT auth exists.
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -46,10 +46,9 @@ class TripFriendRepository {
 
   Future<TripFriendRequest> getRequestById(String requestId) async {
     final uri = Uri.parse('${ApiConfig.friends}/request/$requestId');
+    final headers = await AuthHeaders.build();
 
-    // TODO: add soon — should include AuthHeaders once JWT auth exists.
-    final response = await http.get(uri);
-
+    final response = await http.get(uri, headers: headers);
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to load friend request (${response.statusCode}): ${response.body}',
@@ -60,10 +59,10 @@ class TripFriendRepository {
   }
 
   Future<List<TripFriend>> getAllFriends(String userId) async {
-    final uri = Uri.parse('${ApiConfig.friends}/allFriends?userId=$userId');
+    final uri = Uri.parse('${ApiConfig.friends}/allFriends');
+    final headers = await AuthHeaders.build();
 
-    // TODO: add soon — should include AuthHeaders once JWT auth exists.
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -76,10 +75,10 @@ class TripFriendRepository {
   }
 
   Future<List<TripFriendRequest>> getAllRequests(String userId) async {
-    final uri = Uri.parse('${ApiConfig.friends}/allRequests?userId=$userId');
+    final uri = Uri.parse('${ApiConfig.friends}/allRequests');
+    final headers = await AuthHeaders.build();
 
-    // TODO: add soon — should include AuthHeaders once JWT auth exists.
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -93,11 +92,11 @@ class TripFriendRepository {
 
   Future<TripFriend> updateFriendStatus(String friendId, FriendStatus status) async {
     final uri = Uri.parse('${ApiConfig.friends}/friend/$friendId');
+    final headers = await AuthHeaders.build();
 
-    // TODO: add soon — should include AuthHeaders once JWT auth exists.
     final response = await http.patch(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode({'status': friendStatusToString(status)}),
     );
 
@@ -113,11 +112,11 @@ class TripFriendRepository {
 
   Future<TripFriendRequest> updateRequestStatus(String requestId, RequestStatus status) async {
     final uri = Uri.parse('${ApiConfig.friends}/request/$requestId');
+    final headers = await AuthHeaders.build();
 
-    // TODO: add soon — should include AuthHeaders once JWT auth exists.
     final response = await http.patch(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: jsonEncode({'status': requestStatusToString(status)}),
     );
 
@@ -129,5 +128,43 @@ class TripFriendRepository {
 
     final decoded = jsonDecode(response.body);
     return TripFriendRequest.fromJson(decoded['updatedRequest'] as Map<String, dynamic>);
+  }
+
+  Future<List<RecommendedFriend>> getRecommendedFriends(String userId, {int limit = 10,}) async {
+    final uri = Uri.parse('${ApiConfig.friends}/recommendations?limit=$limit');
+    final headers = await AuthHeaders.build();
+
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load recommended friends (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+    return data
+        .map((e) => RecommendedFriend.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<RecommendedFriend>> searchUsers(String userId, String query) async {
+    final uri = Uri.parse('${ApiConfig.friends}/search').replace(
+      queryParameters: {'q': query},
+    );
+    final headers = await AuthHeaders.build();
+
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to search users (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+    return data
+        .map((e) => RecommendedFriend.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

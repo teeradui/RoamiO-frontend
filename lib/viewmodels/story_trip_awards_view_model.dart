@@ -2,60 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:roamio_frontend/models/services/trip_summary_service.dart';
-
-enum TripAwardType {
-  lateArrival,
-  earlyArrival,
-  food,
-  sightseeing,
-  accommodation,
-  transit,
-  other,
-}
-
-class _AwardMeta {
-  final TripAwardType type;
-  final IconData icon;
-  const _AwardMeta(this.type, this.icon);
-}
-
-final Map<String, _AwardMeta> _awardMetaByName = {
-  // lateArrival
-  'Late Turtle': const _AwardMeta(TripAwardType.lateArrival, CupertinoIcons.tortoise_fill),
-  'Fashionably Late': const _AwardMeta(TripAwardType.lateArrival, Icons.watch_later_rounded),
-  'Last Minute Legend': const _AwardMeta(TripAwardType.lateArrival, Icons.timer_rounded),
-  'Slow & Steady': const _AwardMeta(TripAwardType.lateArrival, Icons.directions_walk_rounded),
-
-  // earlyArrival
-  'Early Bird': const _AwardMeta(TripAwardType.earlyArrival, Icons.wb_sunny_rounded),
-  'First on the Scene': const _AwardMeta(TripAwardType.earlyArrival, Icons.flag_rounded),
-  'Ready, Set, Roam!': const _AwardMeta(TripAwardType.earlyArrival, Icons.rocket_launch_rounded),
-  'Morning Hero': const _AwardMeta(TripAwardType.earlyArrival, Icons.light_mode_rounded),
-
-  // food
-  'Snack Commander': const _AwardMeta(TripAwardType.food, Icons.restaurant_rounded),
-  'Foodie Supreme': const _AwardMeta(TripAwardType.food, Icons.ramen_dining_rounded),
-  'Bite Boss': const _AwardMeta(TripAwardType.food, Icons.fastfood_rounded),
-  'Taste Explorer': const _AwardMeta(TripAwardType.food, Icons.local_dining_rounded),
-
-  // sightseeing
-  'Explorer Mode': const _AwardMeta(TripAwardType.sightseeing, Icons.explore_rounded),
-  'View Hunter': const _AwardMeta(TripAwardType.sightseeing, Icons.landscape_rounded),
-  'Sightseeing Star': const _AwardMeta(TripAwardType.sightseeing, Icons.photo_camera_rounded),
-  'Adventure Magnet': const _AwardMeta(TripAwardType.sightseeing, Icons.travel_explore_rounded),
-
-  // accommodation
-  'Cozy Commander': const _AwardMeta(TripAwardType.accommodation, Icons.hotel_rounded),
-  'Rest Master': const _AwardMeta(TripAwardType.accommodation, Icons.bed_rounded),
-  'Chill Champion': const _AwardMeta(TripAwardType.accommodation, Icons.night_shelter_rounded),
-  'Recharge Pro': const _AwardMeta(TripAwardType.accommodation, Icons.bedtime_rounded),
-
-  // transit
-  'Road Warrior': const _AwardMeta(TripAwardType.transit, Icons.route_rounded),
-  'Always on the Move': const _AwardMeta(TripAwardType.transit, Icons.directions_rounded),
-  'Born to Roam': const _AwardMeta(TripAwardType.transit, Icons.navigation_rounded),
-  'Transit Titan': const _AwardMeta(TripAwardType.transit, Icons.directions_bus_rounded),
-};
+import 'package:roamio_frontend/models/services/auth_service.dart';
+import 'package:roamio_frontend/models/trip_account_model.dart';
+import 'package:roamio_frontend/models/services/trip_account_service.dart';
+import 'package:roamio_frontend/models/trip_award_presets.dart';
 
 class TripAwardPreset {
   final String title;
@@ -99,10 +49,15 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
   StoryTripAwardsViewModel({
     required this.tripId,
     TripSummaryService? tripSummaryService,
-  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService();
+    TripAccountService? tripAccountService,
+  }) : _tripSummaryService = tripSummaryService ?? TripSummaryService(),
+       _tripAccountService = tripAccountService ?? TripAccountService();
 
   final String tripId;
   final TripSummaryService _tripSummaryService;
+  final TripAccountService _tripAccountService;
+
+  String? _currentUserId;
 
   List<StoryTripAward> awards = [];
 
@@ -264,28 +219,7 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
     return options[random.nextInt(options.length)];
   }
 
-  StoryTripAward _createAward({
-    required String userId,
-    required String username,
-    required TripAwardType type,
-    String? profileImageUrl,
-    bool isCurrentUser = false,
-  }) {
-    final preset = _getAwardPreset(type: type, userId: userId);
-
-    return StoryTripAward(
-      userId: userId,
-      username: username,
-      type: type,
-      awardTitle: preset.title,
-      awardSubtitle: preset.subtitle,
-      awardIcon: preset.icon,
-      profileImageUrl: profileImageUrl,
-      isCurrentUser: isCurrentUser,
-    );
-  }
-
-    Future<void> loadTripAwards() async {
+  Future<void> loadTripAwards() async {
     debugPrint('========== LOAD STORY TRIP AWARDS ==========');
     debugPrint('Trip ID: $tripId');
 
@@ -294,14 +228,38 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      _currentUserId = await AuthService.instance.getCurrentUserId();
+
       final fetchedAwards = await _tripSummaryService.getAwards(tripId);
 
-      // WIP (need to implement): backend does not yet return username
-      // for each award (Award only stores user_id). Also hardcoding
-      // isCurrentUser check to userId == '1' until real auth/current
-      // user id is wired in.
+      // Look up each award-holder's account (username) in parallel.
+      final uniqueUserIds = fetchedAwards
+          .map((a) => a.userId)
+          .whereType<String>()
+          .toSet()
+          .toList();
+
+      final accountResults = await Future.wait(
+        uniqueUserIds.map((userId) async {
+          try {
+            return await _tripAccountService.getAccountById(userId);
+          } catch (error) {
+            debugPrint('LOAD AWARD ACCOUNT ERROR ($userId): $error');
+            return null;
+          }
+        }),
+      );
+
+      final accountsByUserId = <String, TripAccount>{};
+      for (var i = 0; i < uniqueUserIds.length; i++) {
+        final account = accountResults[i];
+        if (account != null) {
+          accountsByUserId[uniqueUserIds[i]] = account;
+        }
+      }
+
       awards = fetchedAwards.map((award) {
-        final meta = _awardMetaByName[award.awardName];
+        final meta = awardMetaByName[award.awardName];
 
         if (meta == null) {
           debugPrint(
@@ -310,14 +268,18 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
           );
         }
 
+        final userId = award.userId ?? '';
+        final account = accountsByUserId[userId];
+
         return StoryTripAward(
-          userId: award.userId ?? '',
-          username: 'WIP (need to implement)',
+          userId: userId,
+          username: account?.username ?? 'Unknown User',
+          profileImageUrl: account?.profilePicture,
           type: meta?.type ?? TripAwardType.other,
           awardTitle: award.awardName,
           awardSubtitle: award.awardDescription,
           awardIcon: meta?.icon ?? Icons.emoji_events_rounded,
-          isCurrentUser: award.userId == '1',
+          isCurrentUser: userId == _currentUserId,
         );
       }).toList();
 
@@ -326,7 +288,7 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
 
       for (final award in awards) {
         debugPrint(
-          '${award.userId} → '
+          '${award.username} → '
           '${award.awardTitle} '
           '(${award.type})',
         );
@@ -354,56 +316,6 @@ class StoryTripAwardsViewModel extends ChangeNotifier {
       debugPrint('===========================================');
 
       notifyListeners();
-    }
-  }
-
-  Color getAwardColor(TripAwardType type) {
-    switch (type) {
-      case TripAwardType.lateArrival:
-        return const Color(0xFFF7630D);
-
-      case TripAwardType.earlyArrival:
-        return const Color(0xFFECA205);
-
-      case TripAwardType.food:
-        return const Color(0xFFFF8340);
-
-      case TripAwardType.sightseeing:
-        return const Color(0xFF36A1C7);
-
-      case TripAwardType.accommodation:
-        return const Color(0xFF8E5CF7);
-
-      case TripAwardType.transit:
-        return const Color(0xFF2D7DFB);
-
-      case TripAwardType.other:
-        return const Color(0xFF9E9E9E);
-    }
-  }
-
-  Color getAwardBackgroundColor(TripAwardType type) {
-    switch (type) {
-      case TripAwardType.lateArrival:
-        return const Color(0x30FF7D5C);
-
-      case TripAwardType.earlyArrival:
-        return const Color(0x3BFFE37A);
-
-      case TripAwardType.food:
-        return const Color(0x30FFD3BB);
-
-      case TripAwardType.sightseeing:
-        return const Color(0x2636A1C7);
-
-      case TripAwardType.accommodation:
-        return const Color(0x268E5CF7);
-
-      case TripAwardType.transit:
-        return const Color(0x262D7DFB);
-
-      case TripAwardType.other:
-        return const Color(0x1F9E9E9E);
     }
   }
 }

@@ -137,6 +137,7 @@ class StoryReliabilityScoresViewModel extends ChangeNotifier {
         return StoryReliabilityMember(
           userId: entry.userId,
           username: entry.username,
+          profileImageUrl: entry.profilePicture,
           arrivalStatus: status,
           scoreChange: _scoreChangeForStatus(status),
           currentScore: entry.currentScore.round(),

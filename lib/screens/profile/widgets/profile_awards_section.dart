@@ -1,13 +1,13 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
-import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
-import 'package:roamio_frontend/viewmodels/story_trip_awards_view_model.dart';
+import 'package:roamio_frontend/models/trip_account_model.dart';
+import 'package:roamio_frontend/models/trip_award_presets.dart';
 
 class ProfileAwardsSection extends StatelessWidget {
   const ProfileAwardsSection({super.key, required this.awards});
 
-  final List<StoryTripAward> awards;
+  final List<AccountAward> awards;
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +18,11 @@ class ProfileAwardsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Awards header — อยู่นอกการ์ด
         Row(
           children: [
             ShaderMask(
               shaderCallback: (bounds) {
-                return LinearGradient(
-                  colors: AppColors.sparkle,
-                ).createShader(bounds);
+                return LinearGradient(colors: AppColors.sparkle).createShader(bounds);
               },
               child: const Icon(
                 FluentIcons.star_emphasis_24_filled,
@@ -58,43 +55,45 @@ class ProfileAwardsSection extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // การ์ด
         Container(
-  width: double.infinity,
-  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-  decoration: BoxDecoration(
-    color: AppColors.bgCard,
-    borderRadius: BorderRadius.circular(24),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.08),
-        blurRadius: 10,
-        offset: const Offset(0, 4),
-      ),
-    ],
-  ),
-  child: SingleChildScrollView(
-  scrollDirection: Axis.horizontal,
-  child: ConstrainedBox(
-    constraints: BoxConstraints(
-      minWidth: MediaQuery.of(context).size.width - 40,
-    ),
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: awards.map((award) {
-        return _buildAwardItem(award);
-      }).toList(),
-      ),
-    ),
-  ),
-),
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: MediaQuery.of(context).size.width - 40,
+              ),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: awards.map((award) {
+                  return _buildAwardItem(award);
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildAwardItem(StoryTripAward award) {
-    final awardColor = _getAwardColor(award.type);
+  Widget _buildAwardItem(AccountAward award) {
+    final meta = awardMetaByName[award.awardName];
+    final type = meta?.type ?? TripAwardType.other;
+    final icon = meta?.icon ?? Icons.emoji_events_rounded;
+    final awardColor = getAwardColor(type);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -106,13 +105,11 @@ class ProfileAwardsSection extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(award.awardIcon, size: 18, color: awardColor),
-
+          Icon(icon, size: 18, color: awardColor),
           const SizedBox(width: 7),
-
           Text(
-            award.awardTitle,
-            style: TextStyle(
+            award.awardName,
+            style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -121,30 +118,5 @@ class ProfileAwardsSection extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Color _getAwardColor(TripAwardType type) {
-    switch (type) {
-      case TripAwardType.lateArrival:
-        return const Color(0xFFF7630D);
-
-      case TripAwardType.earlyArrival:
-        return const Color(0xFFECA205);
-
-      case TripAwardType.food:
-        return const Color(0xFFFF8340);
-
-      case TripAwardType.sightseeing:
-        return const Color(0xFF36A1C7);
-
-      case TripAwardType.accommodation:
-        return const Color(0xFF8E5CF7);
-
-      case TripAwardType.transit:
-        return const Color(0xFF2D7DFB);
-
-      case TripAwardType.other:
-        return const Color(0xFF9E9E9E);
-    }
   }
 }

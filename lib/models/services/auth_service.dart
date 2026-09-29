@@ -1,58 +1,37 @@
 import 'dart:convert';
-
-import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  final String baseUrl;
+  AuthService._();
+  static final AuthService instance = AuthService._();
 
-  AuthService({
-    required this.baseUrl,
-  });
+  final _storage = const FlutterSecureStorage();
+  static const _tokenKey = 'auth_token';
+  static const _userIdKey = 'auth_user_id';
 
-  Future<void> register({
-    required String name,
-    required String username,
-    required String email,
-    required String password,
-    String? profilePicturePath,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'name': name,
-        'username': username,
-        'email': email,
-        'password': password,
-        'profilePicture': profilePicturePath,
-      }),
-    );
+  String? _cachedToken;
+  String? _cachedUserId;
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return;
-    }
-
-    if (response.statusCode == 409) {
-      final data = jsonDecode(response.body);
-
-      throw AuthException(
-        data['message'] ?? 'Registration conflict.',
-      );
-    }
-
-    throw AuthException(
-      'Unable to create your account. Please try again.',
-    );
+  Future<void> saveSession({required String token, required String userId}) async {
+    await _storage.write(key: _tokenKey, value: token);
+    await _storage.write(key: _userIdKey, value: userId);
+    _cachedToken = token;
+    _cachedUserId = userId;
   }
-}
 
-class AuthException implements Exception {
-  final String message;
+  Future<String?> getToken() async {
+    return _cachedToken ??= await _storage.read(key: _tokenKey);
+  }
 
-  AuthException(this.message);
+  Future<String?> getCurrentUserId() async {
+    return _cachedUserId ??= await _storage.read(key: _userIdKey);
+  }
 
-  @override
-  String toString() => message;
+  Future<bool> isLoggedIn() async => (await getToken()) != null;
+
+  Future<void> logout() async {
+    await _storage.deleteAll();
+    _cachedToken = null;
+    _cachedUserId = null;
+  }
 }

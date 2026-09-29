@@ -1,7 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/screens/profile/settings_screen.dart';
+import 'package:roamio_frontend/screens/authentication/sign_in_screen.dart';
 import 'package:roamio_frontend/viewmodels/story_trip_awards_view_model.dart';
+import 'package:roamio_frontend/models/services/auth_service.dart';
+import 'package:roamio_frontend/models/services/trip_account_service.dart';
+import 'package:roamio_frontend/models/trip_account_model.dart';
 
 class ProfileUser {
   final String userId;
@@ -20,9 +24,12 @@ class ProfileUser {
 }
 
 class ProfileViewModel extends ChangeNotifier {
-  ProfileViewModel() {
-    loadProfileAwards(tripId: '1');
+  ProfileViewModel({TripAccountService? tripAccountService})
+      : _tripAccountService = tripAccountService ?? TripAccountService() {
+    _initialize();
   }
+
+  final TripAccountService _tripAccountService;
 
   bool _isDisposed = false;
 
@@ -32,14 +39,16 @@ class ProfileViewModel extends ChangeNotifier {
     super.dispose();
   }
 
+  bool isLoading = false;
+  String? errorMessage;
+
   // Profile information
   ProfileUser _user = const ProfileUser(
-    userId: '1',
-    name: 'Tiana',
-    username: '@tiana',
-    profileImageUrl:
-        'https://i.pinimg.com/736x/8e/d3/49/8ed349e7e3e46319c775edf070887e13.jpg',
-    reliabilityScore: 367,
+    userId: '',
+    name: '',
+    username: '',
+    profileImageUrl: null,
+    reliabilityScore: 200,
   );
 
   ProfileUser get user => _user;
@@ -50,9 +59,9 @@ class ProfileViewModel extends ChangeNotifier {
   int get reliabilityScore => _user.reliabilityScore;
 
   // Trip statistics
-  int _tripsCompleted = 12;
-  int _joined = 12;
-  int _attended = 12;
+  int _tripsCompleted = 0;
+  int _joined = 0;
+  int _attended = 0;
 
   int get tripsCompleted => _tripsCompleted;
   int get joined => _joined;
@@ -61,7 +70,6 @@ class ProfileViewModel extends ChangeNotifier {
   // Attendance rate
   int get attendanceRate {
     if (_joined == 0) return 0;
-
     return ((_attended / _joined) * 100).round().clamp(0, 100);
   }
 
@@ -90,34 +98,94 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  // Score color
   bool get isReliable => _user.reliabilityScore >= 200;
 
-  void setReliabilityScore(int score) {
-    _user = ProfileUser(
-      userId: _user.userId,
-      name: _user.name,
-      username: _user.username,
-      profileImageUrl: _user.profileImageUrl,
-      reliabilityScore: score,
-    );
+  // =========================================================
+  // INITIAL LOAD
+  // =========================================================
 
-    notifyListeners();
+  Future<void> _initialize() async {
+    final userId = await AuthService.instance.getCurrentUserId();
+
+    if (userId == null) {
+      errorMessage = 'Not signed in.';
+      notifyListeners();
+      return;
+    }
+
+    await loadProfile(userId);
+    await loadTripStatistics(userId);
+    await loadProfileAwards(userId);
   }
 
-  void setTripStatistics({
-    required int tripsCompleted,
-    required int joined,
-    required int attended,
-  }) {
-    _tripsCompleted = tripsCompleted;
-    _joined = joined;
-    _attended = attended;
+  Future<void> loadProfile(String userId) async {
+    if (_isDisposed) return;
 
+    isLoading = true;
+    errorMessage = null;
     notifyListeners();
+
+    try {
+      final account = await _tripAccountService.getAccountById(userId);
+
+      if (_isDisposed) return;
+
+      _user = ProfileUser(
+        userId: account.userId,
+        name: account.firstName.isNotEmpty
+            ? '${account.firstName} ${account.lastName}'.trim()
+            : account.username,
+        username: '@${account.username}',
+        profileImageUrl: account.profilePicture,
+        reliabilityScore: account.reliabilityScore.round(),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('LOAD PROFILE ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (_isDisposed) return;
+      errorMessage = 'Unable to load profile.';
+    } finally {
+      if (_isDisposed) return;
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
-  Future<void> logout() async {
+  Future<void> loadTripStatistics(String userId) async {
+    if (_isDisposed) return;
+
+    try {
+      final trips = await _tripAccountService.getAccountTrips(userId);
+
+      if (_isDisposed) return;
+
+      _joined = trips.length;
+
+      _attended = trips
+          .where((t) => t.attendance != ReliabilityAttendance.missing)
+          .length;
+
+      _tripsCompleted = trips
+          .where((t) => t.tripStatus == TripStatus.completed)
+          .length;
+
+      notifyListeners();
+    } catch (error, stackTrace) {
+      debugPrint('LOAD TRIP STATISTICS ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      // Leave stats at 0 rather than surfacing a second error banner
+      // alongside a possible profile-load error.
+    }
+  }
+
+  // =========================================================
+  // LOGOUT
+  // =========================================================
+
+  Future<void> logout(BuildContext context) async {
+    await AuthService.instance.logout();
+
     _user = const ProfileUser(
       userId: '',
       name: '',
@@ -132,78 +200,45 @@ class ProfileViewModel extends ChangeNotifier {
     _awards = [];
 
     notifyListeners();
+
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const SignInScreen()), // TODO: confirm actual sign-in screen widget
+        (route) => false,
+      );
+    }
   }
 
   void openSettings(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(
-      MaterialPageRoute(
-        builder: (_) => const SettingsScreen(),
-      ),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
   }
 
-  // Awards
-  List<StoryTripAward> _awards = [];
+  // =========================================================
+  // AWARDS
+  // =========================================================
 
-  List<StoryTripAward> get awards => _awards;
+  List<AccountAward> _awards = [];
+
+  List<AccountAward> get awards => _awards;
 
   bool get hasAwards => _awards.isNotEmpty;
 
-  void setAwards(List<StoryTripAward> awards) {
-    _awards = awards;
-    notifyListeners();
-  }
-
-  Future<void> loadProfileAwards({
-    required String tripId,
-  }) async {
+  Future<void> loadProfileAwards(String userId) async {
     if (_isDisposed) return;
 
-    final awardsViewModel = StoryTripAwardsViewModel(
-      tripId: tripId,
-    );
+    try {
+      final fetchedAwards = await _tripAccountService.getAwardsByUserId(userId);
 
-    await awardsViewModel.loadTripAwards();
+      if (_isDisposed) return;
 
-    if (_isDisposed) return;
-
-    _awards = awardsViewModel.awards;
-    notifyListeners();
-  }
-
-  void loadMockAwards() {
-    _awards = [
-      StoryTripAward(
-        userId: '1',
-        username: '@tiana',
-        type: TripAwardType.earlyArrival,
-        awardTitle: 'Early Bird',
-        awardSubtitle: '',
-        awardIcon: Icons.wb_sunny_rounded,
-        isCurrentUser: true,
-      ),
-      StoryTripAward(
-        userId: '1',
-        username: '@tiana',
-        type: TripAwardType.food,
-        awardTitle: 'Foodie Supreme',
-        awardSubtitle: '',
-        awardIcon: Icons.ramen_dining_rounded,
-        isCurrentUser: true,
-      ),
-      StoryTripAward(
-        userId: '1',
-        username: '@tiana',
-        type: TripAwardType.sightseeing,
-        awardTitle: 'Explorer Mode',
-        awardSubtitle: '',
-        awardIcon: Icons.explore_rounded,
-        isCurrentUser: true,
-      ),
-    ];
-
-    notifyListeners();
+      _awards = fetchedAwards;
+      notifyListeners();
+    } catch (error, stackTrace) {
+      debugPrint('LOAD PROFILE AWARDS ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      // Leave awards empty rather than surfacing another error banner.
+    }
   }
 }
