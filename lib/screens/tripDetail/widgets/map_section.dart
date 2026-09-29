@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:roamio_frontend/theme/colors.dart';
+import 'package:roamio_frontend/theme/map_styles.dart';
 import 'package:roamio_frontend/viewmodels/map_section_view_model.dart';
 import 'package:roamio_frontend/viewmodels/trip_detail_view_model.dart';
 import 'package:tabler_icons_plus/tabler_icons_plus.dart';
@@ -229,6 +230,7 @@ class _MapSectionState extends State<MapSection> {
               child: viewModel.mapCenter == null
                   ? const _MapLoadingIndicator()
                   : GoogleMap(
+                      style: MapStyles.retro,
                       initialCameraPosition: CameraPosition(
                         target: viewModel.mapCenter!,
                         zoom: 13,
