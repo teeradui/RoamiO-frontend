@@ -1,10 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:roamio_frontend/viewmodels/friend_list_error.dart';
 import 'package:roamio_frontend/viewmodels/my_friends_view_model.dart';
+import 'package:roamio_frontend/models/services/trip_friend_service.dart';
+import 'package:roamio_frontend/models/services/auth_service.dart';
+import 'package:roamio_frontend/models/trip_friend_model.dart';
 
 enum FriendRequestStatus { none, pending, friends }
 
 class FriendRecommendViewModel extends ChangeNotifier {
+  FriendRecommendViewModel({TripFriendService? tripFriendService})
+      : _tripFriendService = tripFriendService ?? TripFriendService();
+
+  final TripFriendService _tripFriendService;
+
   FriendListErrorType? _errorType;
 
   String? get errorMessage {
@@ -18,40 +26,13 @@ class FriendRecommendViewModel extends ChangeNotifier {
     }
   }
 
-  final List<FriendItem> _recommendations = [
-    // TODO: Replace mock recommendations with users
-  // who previously participated in the same trips as the registered user.
-    const FriendItem(
-      userId: '4',
-      name: 'Alice',
-      username: '@alice',
-      profileImageUrl: 'https://i.pinimg.com/736x/b9/7a/7c/b97a7cdd20f7b616d6b7cb6ae6f2c719.jpg',
-      reliabilityScore: 285,
-    ),
-    const FriendItem(
-      userId: '5',
-      name: 'Max',
-      username: '@max',
-      profileImageUrl: 'https://i.pinimg.com/736x/77/f7/ba/77f7ba78996cfa4f927fe0ff7006d464.jpg',
-      reliabilityScore: 240,
-    ),
-    const FriendItem(
-      userId: '6',
-      name: 'Charlie',
-      username: '@charlie',
-      profileImageUrl: 'https://i.pinimg.com/1200x/0b/fd/75/0bfd757069e6db2513a6dafbdbfdd7a7.jpg',
-      reliabilityScore: 310,
-    ),
-  ];
-// TODO: Replace mock current user ID with the registered user's
-// actual user ID from authentication/backend.
-  final String _currentUserId = '1';
+  List<FriendItem> _recommendations = [];
+  String? _currentUserId;
 
-  final Set<String> _friendIds = {'4'};
-
-  final Set<String> _pendingRequestIds = {'5'};
-
+  final Set<String> _friendIds = {};
+  final Set<String> _pendingRequestIds = {};
   final Map<String, String> _requestErrorMessages = {};
+
   List<FriendItem> get recommendations => _recommendations
       .where(
         (user) =>
@@ -62,33 +43,64 @@ class FriendRecommendViewModel extends ChangeNotifier {
       .toList();
 
   FriendRequestStatus getRequestStatus(String userId) {
-    if (_friendIds.contains(userId)) {
-      return FriendRequestStatus.friends;
-    }
-
-    if (_pendingRequestIds.contains(userId)) {
-      return FriendRequestStatus.pending;
-    }
-
+    if (_friendIds.contains(userId)) return FriendRequestStatus.friends;
+    if (_pendingRequestIds.contains(userId)) return FriendRequestStatus.pending;
     return FriendRequestStatus.none;
   }
 
-  String? getRequestError(String userId) {
-    return _requestErrorMessages[userId];
-  }
+  String? getRequestError(String userId) => _requestErrorMessages[userId];
 
   Future<void> loadRecommendations() async {
     _errorType = null;
     notifyListeners();
 
     try {
-      // TODO: replace with backend service later
-      await Future.delayed(const Duration(milliseconds: 300));
+      _currentUserId = await AuthService.instance.getCurrentUserId();
 
-      // Keep current mock recommendations.
-    } catch (e) {
-      final message = e.toString().toLowerCase();
+      final results = await Future.wait([
+        _tripFriendService.getRecommendedFriends(),
+        _tripFriendService.getAllFriends(),
+        _tripFriendService.getAllRequests(),
+      ]);
 
+      final recommended = results[0] as List<RecommendedFriend>;
+      final friends = results[1] as List<TripFriend>;
+      final requests = results[2] as List<TripFriendRequest>;
+
+      _friendIds
+        ..clear()
+        ..addAll(
+          friends
+              .where((f) => f.friendStatus == FriendStatus.friend)
+              .map((f) => f.userId == _currentUserId ? f.friendUserId : f.userId),
+        );
+
+      _pendingRequestIds
+        ..clear()
+        ..addAll(
+          requests
+              .where((r) =>
+                  r.senderId == _currentUserId &&
+                  r.requestStatus == RequestStatus.undecided)
+              .map((r) => r.receiverId),
+        );
+
+      _recommendations = recommended.map((r) {
+        return FriendItem(
+          userId: r.userId,
+          name: '${r.firstName} ${r.lastName}'.trim(),
+          username: '@${r.username}',
+          profileImageUrl: r.profilePicture,
+          reliabilityScore: 0, // WIP: recommendations don't include a score
+        );
+      }).toList();
+
+      notifyListeners();
+    } catch (error, stackTrace) {
+      debugPrint('LOAD RECOMMENDATIONS ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      final message = error.toString().toLowerCase();
       if (message.contains('socketexception') ||
           message.contains('connection refused') ||
           message.contains('failed host lookup') ||
@@ -107,27 +119,19 @@ class FriendRecommendViewModel extends ChangeNotifier {
     _requestErrorMessages.remove(userId);
     notifyListeners();
 
-    // SRS-208
-    if (_friendIds.contains(userId)) {
-      return;
-    }
-
-    // SRS-209
-    if (_pendingRequestIds.contains(userId)) {
-      return;
-    }
+    if (_friendIds.contains(userId)) return;
+    if (_pendingRequestIds.contains(userId)) return;
 
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await _tripFriendService.sendRequest(userId);
 
-      // SRS-207
       _pendingRequestIds.add(userId);
-
       notifyListeners();
-    } catch (e) {
-      // SRS-211
-      _requestErrorMessages[userId] =
-          'Unable to send friend request. Please try again.';
+    } catch (error, stackTrace) {
+      debugPrint('SEND FRIEND REQUEST ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      _requestErrorMessages[userId] = 'Unable to send friend request. Please try again.';
       notifyListeners();
     }
   }

@@ -7,8 +7,8 @@ class TripFriendService {
   TripFriendService({TripFriendRepository? repository})
       : _repo = repository ?? TripFriendRepository();
 
-  Future<TripFriendRequest> sendRequest(String senderId, String receiverId) {
-    return _repo.sendRequest(senderId, receiverId);
+  Future<TripFriendRequest> sendRequest(String receiverId) {
+    return _repo.sendRequest(receiverId);
   }
 
   Future<TripFriend> getFriendById(String friendId) {
@@ -19,12 +19,12 @@ class TripFriendService {
     return _repo.getRequestById(requestId);
   }
 
-  Future<List<TripFriend>> getAllFriends(String userId) {
-    return _repo.getAllFriends(userId);
+  Future<List<TripFriend>> getAllFriends() {
+    return _repo.getAllFriends();
   }
 
-  Future<List<TripFriendRequest>> getAllRequests(String userId) {
-    return _repo.getAllRequests(userId);
+  Future<List<TripFriendRequest>> getAllRequests() {
+    return _repo.getAllRequests();
   }
 
   Future<TripFriend> updateFriendStatus(String friendId, FriendStatus status) {
@@ -35,11 +35,11 @@ class TripFriendService {
     return _repo.updateRequestStatus(requestId, status);
   }
 
-  Future<List<RecommendedFriend>> getRecommendedFriends(String userId, {int limit = 10,}) {
-    return _repo.getRecommendedFriends(userId, limit: limit);
+  Future<List<RecommendedFriend>> getRecommendedFriends({int limit = 10,}) {
+    return _repo.getRecommendedFriends(limit: limit);
   }
 
-  Future<List<RecommendedFriend>> searchUsers(String userId, String query) {
-    return _repo.searchUsers(userId, query);
+  Future<List<RecommendedFriend>> searchUsers(String query) {
+    return _repo.searchUsers(query);
   }
 }

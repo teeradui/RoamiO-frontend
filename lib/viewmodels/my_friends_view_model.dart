@@ -1,17 +1,21 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:roamio_frontend/config/api_config.dart';
-import 'package:roamio_frontend/config/auth_headers.dart';
 import 'package:roamio_frontend/viewmodels/friend_list_error.dart';
+import 'package:roamio_frontend/models/services/trip_friend_service.dart';
+import 'package:roamio_frontend/models/services/trip_account_service.dart';
+import 'package:roamio_frontend/models/services/auth_service.dart';
+import 'package:roamio_frontend/models/trip_friend_model.dart';
+import 'package:roamio_frontend/viewmodels/friend_display_item.dart';
 
-class FriendItem {
+class FriendItem implements FriendDisplayItem {
+  @override
   final String userId;
+  @override
   final String name;
+  @override
   final String username;
+  @override
   final String? profileImageUrl;
+  @override
   final int reliabilityScore;
   final DateTime? requestTime;
 
@@ -26,51 +30,25 @@ class FriendItem {
 }
 
 class MyFriendsViewModel extends ChangeNotifier {
+  MyFriendsViewModel({
+    TripFriendService? tripFriendService,
+    TripAccountService? tripAccountService,
+  })  : _tripFriendService = tripFriendService ?? TripFriendService(),
+        _tripAccountService = tripAccountService ?? TripAccountService();
+
+  final TripFriendService _tripFriendService;
+  final TripAccountService _tripAccountService;
+
   FriendListErrorType? _errorType;
 
-  final List<FriendItem> _friends = [
-  FriendItem(
-    userId: '1',
-    name: 'Mina',
-    username: '@mina',
-    profileImageUrl:
-        'https://i.pinimg.com/736x/09/9b/f0/099bf067f08cbc40e4d7365815af7731.jpg',
-    reliabilityScore: 245,
-  ),
-  FriendItem(
-    userId: '2',
-    name: 'Jane',
-    username: '@jane',
-    profileImageUrl:
-        'https://i.pinimg.com/736x/a2/cd/d7/a2cdd73dc8ffd68ea2a6faa703431d28.jpg',
-    reliabilityScore: 190,
-  ),
-  FriendItem(
-    userId: '3',
-    name: 'Mark',
-    username: '@mark',
-    profileImageUrl:
-        'https://i.pinimg.com/1200x/93/95/ea/9395ea5873de39c9b1f154680e8e10dc.jpg',
-    reliabilityScore: 200,
-  ),
-
-  const FriendItem(
-      userId: '10',
-      name: 'Alice',
-      username: '@alice',
-      profileImageUrl: 'https://i.pinimg.com/736x/b9/7a/7c/b97a7cdd20f7b616d6b7cb6ae6f2c719.jpg',
-      reliabilityScore: 285,
-    ),
-];
+  List<FriendItem> _friends = [];
 
   String? get errorMessage {
     switch (_errorType) {
       case FriendListErrorType.system:
         return 'Unable to load friends. Please try again.';
-
       case FriendListErrorType.network:
         return 'Request failed. Please check your connection.';
-
       case null:
         return null;
     }
@@ -83,86 +61,76 @@ class MyFriendsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/friends'),
-        headers: await AuthHeaders.build(),
+      final currentUserId = await AuthService.instance.getCurrentUserId();
+      if (currentUserId == null) {
+        throw Exception('Not signed in');
+      }
+
+      final fetchedFriends = await _tripFriendService.getAllFriends();
+
+      // Only show accepted friendships, not pending/undecided rows.
+      final acceptedFriends = fetchedFriends
+          .where((f) => f.friendStatus == FriendStatus.friend)
+          .toList();
+
+      // Resolve "the other person" in each friendship relative to me.
+      final otherUserIds = acceptedFriends
+          .map((f) => f.userId == currentUserId ? f.friendUserId : f.userId)
+          .toSet()
+          .toList();
+
+      final accountResults = await Future.wait(
+        otherUserIds.map((userId) async {
+          try {
+            return await _tripAccountService.getAccountById(userId);
+          } catch (error) {
+            debugPrint('LOAD FRIEND ACCOUNT ERROR ($userId): $error');
+            return null;
+          }
+        }),
       );
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          'Failed to load friends (${response.statusCode})',
-        );
+      final accountsByUserId = <String, dynamic>{};
+      for (var i = 0; i < otherUserIds.length; i++) {
+        final account = accountResults[i];
+        if (account != null) {
+          accountsByUserId[otherUserIds[i]] = account;
+        }
       }
 
-      final decoded = jsonDecode(response.body);
+      _friends = acceptedFriends.map((f) {
+        final otherUserId = f.userId == currentUserId ? f.friendUserId : f.userId;
+        final account = accountsByUserId[otherUserId];
 
-      final friendsJson = decoded is List
-          ? decoded
-          : (decoded['friends'] ?? decoded['data'] ?? const <dynamic>[]);
+        return FriendItem(
+          userId: otherUserId,
+          name: account != null
+              ? '${account.firstName} ${account.lastName}'.trim()
+              : 'Unknown User',
+          username: account != null ? '@${account.username}' : '',
+          profileImageUrl: account?.profilePicture,
+          reliabilityScore: account?.reliabilityScore.round() ?? 0,
+        );
+      }).toList();
 
-      if (friendsJson is! List) {
-        throw const FormatException('Invalid friends response');
+      notifyListeners();
+    } catch (error, stackTrace) {
+      debugPrint('LOAD FRIENDS ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      final message = error.toString().toLowerCase();
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        _errorType = FriendListErrorType.network;
+      } else {
+        _errorType = FriendListErrorType.system;
       }
 
-      _friends
-        ..clear()
-        ..addAll(
-          friendsJson
-              .whereType<Map>()
-              .map(
-                (friend) => _friendFromJson(
-                  Map<String, dynamic>.from(friend),
-                ),
-              ),
-        );
-
-      notifyListeners();
-    } on SocketException {
-      _errorType = FriendListErrorType.network;
-      notifyListeners();
-    } on http.ClientException {
-      _errorType = FriendListErrorType.network;
-      notifyListeners();
-    } catch (_) {
-      _errorType = FriendListErrorType.system;
       notifyListeners();
     }
-  }
-
-  FriendItem _friendFromJson(Map<String, dynamic> json) {
-    final user = json['user'] is Map
-        ? Map<String, dynamic>.from(json['user'] as Map)
-        : json;
-
-    final rawUsername = (user['username'] ?? '').toString();
-
-    return FriendItem(
-      userId: (
-        user['userId'] ??
-        user['id'] ??
-        user['user_id'] ??
-        ''
-      ).toString(),
-      name: (
-        user['name'] ??
-        user['fullName'] ??
-        user['displayName'] ??
-        rawUsername
-      ).toString(),
-      username: rawUsername.isEmpty || rawUsername.startsWith('@')
-          ? rawUsername
-          : '@$rawUsername',
-      profileImageUrl: (
-        user['profileImageUrl'] ??
-        user['profile_image_url'] ??
-        user['avatarUrl']
-      )?.toString(),
-      reliabilityScore: (
-        (user['reliabilityScore'] ??
-                user['reliability_score'] ??
-                user['score']) as num?
-      )?.toInt() ?? 0,
-    );
   }
 
   void setSystemError() {

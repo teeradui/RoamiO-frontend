@@ -8,7 +8,7 @@ import 'package:roamio_frontend/screens/friends/widgets/my_friends_tab.dart';
 import 'package:roamio_frontend/screens/friends/widgets/friend_request_tab.dart';
 import 'package:roamio_frontend/screens/friends/widgets/friend_recommend_tab.dart';
 import 'package:roamio_frontend/screens/friends/widgets/friend_card.dart';
-import 'package:roamio_frontend/viewmodels/friend_request_view_model.dart';
+import 'package:roamio_frontend/viewmodels/friend_request_view_model.dart' hide FriendItem;
 import 'package:roamio_frontend/viewmodels/friend_search_view_model.dart';
 import 'package:roamio_frontend/viewmodels/my_friends_view_model.dart';
 

@@ -9,14 +9,14 @@ import '../trip_friend_model.dart';
 /// Raw data access for friends/friend requests.
 /// Throws on any failure — callers (TripFriendService) decide how to handle it.
 class TripFriendRepository {
-  Future<TripFriendRequest> sendRequest(String senderId, String receiverId) async {
+  Future<TripFriendRequest> sendRequest(String receiverId) async {
     final uri = Uri.parse('${ApiConfig.friends}/sendRequest');
     final headers = await AuthHeaders.build();
 
     final response = await http.post(
       uri,
       headers: headers,
-      body: jsonEncode({'senderId': senderId, 'receiverId': receiverId}),
+      body: jsonEncode({'receiverId': receiverId}),
     );
 
     if (response.statusCode != 201 && response.statusCode != 200) {
@@ -58,7 +58,7 @@ class TripFriendRepository {
     return TripFriendRequest.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  Future<List<TripFriend>> getAllFriends(String userId) async {
+  Future<List<TripFriend>> getAllFriends() async {
     final uri = Uri.parse('${ApiConfig.friends}/allFriends');
     final headers = await AuthHeaders.build();
 
@@ -74,7 +74,7 @@ class TripFriendRepository {
     return data.map((e) => TripFriend.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<List<TripFriendRequest>> getAllRequests(String userId) async {
+  Future<List<TripFriendRequest>> getAllRequests() async {
     final uri = Uri.parse('${ApiConfig.friends}/allRequests');
     final headers = await AuthHeaders.build();
 
@@ -130,7 +130,7 @@ class TripFriendRepository {
     return TripFriendRequest.fromJson(decoded['updatedRequest'] as Map<String, dynamic>);
   }
 
-  Future<List<RecommendedFriend>> getRecommendedFriends(String userId, {int limit = 10,}) async {
+  Future<List<RecommendedFriend>> getRecommendedFriends({int limit = 10,}) async {
     final uri = Uri.parse('${ApiConfig.friends}/recommendations?limit=$limit');
     final headers = await AuthHeaders.build();
 
@@ -148,7 +148,7 @@ class TripFriendRepository {
         .toList();
   }
 
-  Future<List<RecommendedFriend>> searchUsers(String userId, String query) async {
+  Future<List<RecommendedFriend>> searchUsers(String query) async {
     final uri = Uri.parse('${ApiConfig.friends}/search').replace(
       queryParameters: {'q': query},
     );

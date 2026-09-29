@@ -45,9 +45,9 @@ class _FriendProfileView extends StatelessWidget {
                       return Column(
                         children: [
                           ProfileReliabilityCard(
-                            profileImage: AssetImage(
-                              viewModel.profileImagePath,
-                            ),
+                            profileImage: viewModel.profileImageUrl != null
+                                ? NetworkImage(viewModel.profileImageUrl!)
+                                : const AssetImage('assets/images/default_profile.png'),
                             name: viewModel.name,
                             username: viewModel.username,
                             tripsCompleted: viewModel.tripsCompleted,

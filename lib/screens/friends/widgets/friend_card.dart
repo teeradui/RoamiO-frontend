@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/my_friends_view_model.dart';
+import 'package:roamio_frontend/viewmodels/friend_display_item.dart';
 
 class FriendCard extends StatelessWidget {
   const FriendCard({
@@ -12,7 +13,7 @@ class FriendCard extends StatelessWidget {
     this.onTap,
   });
 
-  final FriendItem friend;
+  final FriendDisplayItem friend;
   final Widget? trailing;
   final Widget? subtitle;
   final bool showReliabilityScore;

@@ -1,42 +1,51 @@
 import 'package:flutter/foundation.dart';
 import 'package:roamio_frontend/viewmodels/friend_list_error.dart';
 import 'package:roamio_frontend/viewmodels/my_friends_view_model.dart';
+import 'package:roamio_frontend/models/services/trip_friend_service.dart';
+import 'package:roamio_frontend/models/services/trip_account_service.dart';
+import 'package:roamio_frontend/models/services/auth_service.dart';
+import 'package:roamio_frontend/models/trip_friend_model.dart';
+import 'package:roamio_frontend/viewmodels/friend_display_item.dart';
+
+class FriendRequestItem implements FriendDisplayItem {
+  final String requestId;
+  final String userId;
+  @override
+  final String name;
+  @override
+  final String username;
+  @override
+  final String? profileImageUrl;
+  @override
+  final int reliabilityScore;
+  final DateTime? requestTime;
+
+  const FriendRequestItem({
+    required this.requestId,
+    required this.userId,
+    required this.name,
+    required this.username,
+    this.profileImageUrl,
+    required this.reliabilityScore,
+    this.requestTime,
+  });
+}
 
 class FriendRequestViewModel extends ChangeNotifier {
+  FriendRequestViewModel({
+    TripFriendService? tripFriendService,
+    TripAccountService? tripAccountService,
+  }) : _tripFriendService = tripFriendService ?? TripFriendService(),
+      _tripAccountService = tripAccountService ?? TripAccountService();
+
+  final TripFriendService _tripFriendService;
+  final TripAccountService _tripAccountService;
+
   FriendListErrorType? _errorType;
 
   FriendListErrorType? _responseErrorType;
 
-  final List<FriendItem> _requests = [
-    FriendItem(
-      userId: '7',
-      name: 'Emma',
-      username: '@emma',
-      profileImageUrl: 'https://i.pinimg.com/736x/55/44/9a/55449a9cc139295fe71d06179aee4d01.jpg',
-      reliabilityScore: 275,
-      requestTime: DateTime.now(),
-    ),
-    FriendItem(
-      userId: '8',
-      name: 'James',
-      username: '@james',
-      profileImageUrl: 'https://i.pinimg.com/736x/78/bb/21/78bb21c4f3089c633f1a40d0af713e25.jpg',
-      reliabilityScore: 240,
-      requestTime: DateTime.now().subtract(
-        const Duration(minutes: 1),
-      ),
-    ),
-    FriendItem(
-      userId: '9',
-      name: 'Sophie',
-      username: '@sophie',
-      profileImageUrl: 'https://i.pinimg.com/736x/2f/80/88/2f80886e63251de232d3abcfe1944912.jpg',
-      reliabilityScore: 290,
-      requestTime: DateTime.now().subtract(
-        const Duration(days: 2),
-      ),
-    ),
-  ];
+  List<FriendRequestItem> _requests = [];
 
   String? get errorMessage {
     switch (_errorType) {
@@ -64,53 +73,113 @@ class FriendRequestViewModel extends ChangeNotifier {
     }
   }
 
-  List<FriendItem> get requests => List.unmodifiable(_requests);
+  List<FriendRequestItem> get requests => List.unmodifiable(_requests);
 
   Future<void> loadRequests() async {
     _errorType = null;
     notifyListeners();
 
     try {
-      // TODO: replace with backend service later
-      await Future.delayed(
-        const Duration(milliseconds: 300),
-      );
-
-      // Keep current mock requests.
-    } catch (e) {
-      final message = e.toString().toLowerCase();
-
-      if (message.contains('socketexception') ||
-          message.contains('connection refused') ||
-          message.contains('failed host lookup') ||
-          message.contains('network is unreachable') ||
-          message.contains('timed out')) {
-        _errorType = FriendListErrorType.network;
-      } else {
-        _errorType = FriendListErrorType.system;
+      final currentUserId = await AuthService.instance.getCurrentUserId();
+      if (currentUserId == null) {
+        throw Exception('Not signed in');
       }
 
-      notifyListeners();
-    }
-  }
+      final fetchedRequests = await _tripFriendService.getAllRequests();
 
-  Future<void> acceptRequest(String userId) async {
+      // Only show pending/undecided requests.
+      final pendingRequests = fetchedRequests
+        .where((request) =>
+            request.requestStatus == RequestStatus.undecided)
+        .toList();
+
+      // For an incoming request, the other user is the sender.
+      final otherUserIds = pendingRequests
+        .map((request) => request.senderId)
+        .toSet()
+        .toList();
+
+      final accountResults = await Future.wait(
+        otherUserIds.map((userId) async {
+          try {
+            return await _tripAccountService.getAccountById(userId); 
+          } catch (error) {
+            debugPrint('LOAD REQUEST ACCOUNT ERROR ($userId): $error');
+            return null;
+          }
+        }),
+      );
+
+      final accountsByUserId = <String, dynamic>{};
+
+        for (var i = 0; i < otherUserIds.length; i++) {
+          final account = accountResults[i];
+
+          if (account != null) {
+            accountsByUserId[otherUserIds[i]] = account;
+          }
+        }
+
+        _requests = pendingRequests.map((request) {
+          final otherUserId = request.senderId;
+          final account = accountsByUserId[otherUserId];
+
+          return FriendRequestItem(
+            requestId: request.requestId,
+            userId: request.senderId,
+            name: account != null
+                ? '${account.firstName} ${account.lastName}'.trim()
+                : 'Unknown User',
+            username: account != null
+                ? '@${account.username}'
+                : '',
+            profileImageUrl: account?.profilePicture,
+            reliabilityScore: account?.reliabilityScore.round() ?? 0,
+            requestTime: null,
+          );
+        }).toList();
+
+        notifyListeners();
+      } catch (error, stackTrace) {
+        debugPrint('LOAD REQUESTS ERROR: $error');
+        debugPrintStack(stackTrace: stackTrace);
+
+        final message = error.toString().toLowerCase();
+
+        if (message.contains('socketexception') ||
+            message.contains('connection refused') ||
+            message.contains('network is unreachable') ||
+            message.contains('failed host lookup') ||
+            message.contains('timed out')) {
+          _errorType = FriendListErrorType.network;
+        } else {
+          _errorType = FriendListErrorType.system;
+        }
+
+        notifyListeners();
+      }
+    }
+
+  Future<void> acceptRequest(String requestId) async {
     _responseErrorType = null;
     notifyListeners();
 
     try {
-      // TODO: Send accept friend request to backend
-      await Future.delayed(
-        const Duration(milliseconds: 300),
+      await _tripFriendService.updateRequestStatus(
+        requestId,
+        RequestStatus.accepted,
       );
 
       _requests.removeWhere(
-        (request) => request.userId == userId,
+        (request) => request.requestId == requestId,
       );
 
       notifyListeners();
-    } catch (e) {
-      final message = e.toString().toLowerCase();
+    } catch (error, stackTrace) {
+      debugPrint('ACCEPT REQUEST ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      final message = error.toString().toLowerCase();
 
       if (message.contains('socketexception') ||
           message.contains('connection refused') ||
@@ -126,23 +195,26 @@ class FriendRequestViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> declineRequest(String userId) async {
+  Future<void> declineRequest(String requestId) async {
     _responseErrorType = null;
     notifyListeners();
 
     try {
-      // TODO: Send decline friend request to backend
-      await Future.delayed(
-        const Duration(milliseconds: 300),
+      await _tripFriendService.updateRequestStatus(
+        requestId,
+        RequestStatus.denied,
       );
 
       _requests.removeWhere(
-        (request) => request.userId == userId,
+        (request) => request.requestId == requestId,
       );
 
       notifyListeners();
-    } catch (e) {
-      final message = e.toString().toLowerCase();
+    } catch (error, stackTrace) {
+      debugPrint('DECLINE REQUEST ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      final message = error.toString().toLowerCase();
 
       if (message.contains('socketexception') ||
           message.contains('connection refused') ||
