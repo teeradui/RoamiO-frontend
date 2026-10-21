@@ -179,3 +179,32 @@ class AccountAward {
     );
   }
 }
+
+class LeaderboardEntry {
+  const LeaderboardEntry({
+    required this.userId,
+    required this.firstName,
+    required this.lastName,
+    required this.username,
+    this.profilePicture,
+    required this.reliabilityScore,
+  });
+
+  final String userId;
+  final String firstName;
+  final String lastName;
+  final String username;
+  final String? profilePicture;
+  final double reliabilityScore;
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
+    return LeaderboardEntry(
+      userId: json['userId']?.toString() ?? json['user_id']?.toString() ?? '',
+      firstName: json['firstName']?.toString() ?? json['first_name']?.toString() ?? '',
+      lastName: json['lastName']?.toString() ?? json['last_name']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      profilePicture: json['profilePicture']?.toString() ?? json['profile_picture_url']?.toString(),
+      reliabilityScore: _parseDouble(json['reliabilityScore'] ?? json['reliability_score']) ?? 200,
+    );
+  }
+}

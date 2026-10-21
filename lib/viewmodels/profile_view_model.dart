@@ -32,6 +32,7 @@ class ProfileViewModel extends ChangeNotifier {
   final TripAccountService _tripAccountService;
 
   bool _isDisposed = false;
+  bool _isLoggingOut = false;
 
   @override
   void dispose() {
@@ -105,7 +106,11 @@ class ProfileViewModel extends ChangeNotifier {
   // =========================================================
 
   Future<void> _initialize() async {
+    if (_isDisposed || _isLoggingOut) return;
+
     final userId = await AuthService.instance.getCurrentUserId();
+
+    if (_isDisposed || _isLoggingOut) return;
 
     if (userId == null) {
       errorMessage = 'Not signed in.';
@@ -113,13 +118,15 @@ class ProfileViewModel extends ChangeNotifier {
       return;
     }
 
-    await loadProfile(userId);
-    await loadTripStatistics(userId);
-    await loadProfileAwards(userId);
+    await Future.wait([
+      loadProfile(userId),
+      loadTripStatistics(userId),
+      loadProfileAwards(userId),
+    ]);
   }
 
   Future<void> loadProfile(String userId) async {
-    if (_isDisposed) return;
+    if (_isDisposed || _isLoggingOut) return;
 
     isLoading = true;
     errorMessage = null;
@@ -128,7 +135,7 @@ class ProfileViewModel extends ChangeNotifier {
     try {
       final account = await _tripAccountService.getAccountById(userId);
 
-      if (_isDisposed) return;
+      if (_isDisposed || _isLoggingOut) return;
 
       _user = ProfileUser(
         userId: account.userId,
@@ -153,12 +160,12 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> loadTripStatistics(String userId) async {
-    if (_isDisposed) return;
+    if (_isDisposed || _isLoggingOut) return;
 
     try {
       final trips = await _tripAccountService.getAccountTrips(userId);
 
-      if (_isDisposed) return;
+      if (_isDisposed || _isLoggingOut) return;
 
       _joined = trips.length;
 
@@ -172,10 +179,10 @@ class ProfileViewModel extends ChangeNotifier {
 
       notifyListeners();
     } catch (error, stackTrace) {
+      if (_isLoggingOut) return;
+
       debugPrint('LOAD TRIP STATISTICS ERROR: $error');
       debugPrintStack(stackTrace: stackTrace);
-      // Leave stats at 0 rather than surfacing a second error banner
-      // alongside a possible profile-load error.
     }
   }
 
@@ -184,6 +191,8 @@ class ProfileViewModel extends ChangeNotifier {
   // =========================================================
 
   Future<void> logout(BuildContext context) async {
+    _isLoggingOut = true;
+
     await AuthService.instance.logout();
 
     _user = const ProfileUser(
@@ -226,19 +235,21 @@ class ProfileViewModel extends ChangeNotifier {
   bool get hasAwards => _awards.isNotEmpty;
 
   Future<void> loadProfileAwards(String userId) async {
-    if (_isDisposed) return;
+    if (_isDisposed || _isLoggingOut) return;
 
     try {
-      final fetchedAwards = await _tripAccountService.getAwardsByUserId(userId);
+      final fetchedAwards =
+          await _tripAccountService.getAwardsByUserId(userId);
 
-      if (_isDisposed) return;
+      if (_isDisposed || _isLoggingOut) return;
 
       _awards = fetchedAwards;
       notifyListeners();
     } catch (error, stackTrace) {
+      if (_isLoggingOut) return;
+
       debugPrint('LOAD PROFILE AWARDS ERROR: $error');
       debugPrintStack(stackTrace: stackTrace);
-      // Leave awards empty rather than surfacing another error banner.
     }
   }
 }

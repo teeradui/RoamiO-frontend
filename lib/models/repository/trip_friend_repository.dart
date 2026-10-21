@@ -26,7 +26,9 @@ class TripFriendRepository {
     }
 
     final decoded = jsonDecode(response.body);
-    return TripFriendRequest.fromJson(decoded['request'] as Map<String, dynamic>);
+    return TripFriendRequest.fromJson(
+      decoded['request'] as Map<String, dynamic>,
+    );
   }
 
   Future<TripFriend> getFriendById(String friendId) async {
@@ -41,7 +43,9 @@ class TripFriendRepository {
       );
     }
 
-    return TripFriend.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return TripFriend.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   Future<TripFriendRequest> getRequestById(String requestId) async {
@@ -55,7 +59,9 @@ class TripFriendRepository {
       );
     }
 
-    return TripFriendRequest.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return TripFriendRequest.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   Future<List<TripFriend>> getAllFriends() async {
@@ -71,26 +77,36 @@ class TripFriendRepository {
     }
 
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data.map((e) => TripFriend.fromJson(e as Map<String, dynamic>)).toList();
+    return data
+        .map((e) => TripFriend.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<TripFriendRequest>> getAllRequests() async {
     final uri = Uri.parse('${ApiConfig.friends}/allRequests');
+
     final headers = await AuthHeaders.build();
 
     final response = await http.get(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(
-        'Failed to load friend requests (${response.statusCode}): ${response.body}',
+        'Failed to load friend requests '
+        '(${response.statusCode}): ${response.body}',
       );
     }
 
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data.map((e) => TripFriendRequest.fromJson(e as Map<String, dynamic>)).toList();
+
+    return data
+        .map((e) => TripFriendRequest.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<TripFriend> updateFriendStatus(String friendId, FriendStatus status) async {
+  Future<TripFriend> updateFriendStatus(
+    String friendId,
+    FriendStatus status,
+  ) async {
     final uri = Uri.parse('${ApiConfig.friends}/friend/$friendId');
     final headers = await AuthHeaders.build();
 
@@ -107,10 +123,15 @@ class TripFriendRepository {
     }
 
     final decoded = jsonDecode(response.body);
-    return TripFriend.fromJson(decoded['updatedFriend'] as Map<String, dynamic>);
+    return TripFriend.fromJson(
+      decoded['updatedFriend'] as Map<String, dynamic>,
+    );
   }
 
-  Future<TripFriendRequest> updateRequestStatus(String requestId, RequestStatus status) async {
+  Future<TripFriendRequest> updateRequestStatus(
+    String requestId,
+    RequestStatus status,
+  ) async {
     final uri = Uri.parse('${ApiConfig.friends}/request/$requestId');
     final headers = await AuthHeaders.build();
 
@@ -127,10 +148,14 @@ class TripFriendRepository {
     }
 
     final decoded = jsonDecode(response.body);
-    return TripFriendRequest.fromJson(decoded['updatedRequest'] as Map<String, dynamic>);
+    return TripFriendRequest.fromJson(
+      decoded['updatedRequest'] as Map<String, dynamic>,
+    );
   }
 
-  Future<List<RecommendedFriend>> getRecommendedFriends({int limit = 10,}) async {
+  Future<List<RecommendedFriend>> getRecommendedFriends({
+    int limit = 10,
+  }) async {
     final uri = Uri.parse('${ApiConfig.friends}/recommendations?limit=$limit');
     final headers = await AuthHeaders.build();
 
@@ -149,9 +174,9 @@ class TripFriendRepository {
   }
 
   Future<List<RecommendedFriend>> searchUsers(String query) async {
-    final uri = Uri.parse('${ApiConfig.friends}/search').replace(
-      queryParameters: {'q': query},
-    );
+    final uri = Uri.parse(
+      '${ApiConfig.friends}/search',
+    ).replace(queryParameters: {'q': query});
     final headers = await AuthHeaders.build();
 
     final response = await http.get(uri, headers: headers);

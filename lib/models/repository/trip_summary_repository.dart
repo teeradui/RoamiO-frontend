@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../../config/api_config.dart';
 import '../../config/auth_headers.dart';
 import '../trip_summary_model.dart';
+import '../services/auth_service.dart';
 
 /// Raw data access for trip summary/story/awards/photos.
 /// Throws on any failure — callers (TripSummaryService) decide how to handle it.
@@ -136,21 +138,37 @@ class TripSummaryRepository {
     }
 
     final decoded = jsonDecode(response.body);
-    return ActivityGraphData.fromJson(decoded['graphData'] as Map<String, dynamic>);
+    return ActivityGraphData.fromJson(
+      decoded['graphData'] as Map<String, dynamic>,
+    );
   }
 
   Future<StoryData> getStoryData(String tripId) async {
-    final uri = Uri.parse('${_base(tripId)}/story');
+    final userId = await AuthService.instance.getCurrentUserId();
+
+    if (userId == null || userId.isEmpty) {
+      throw Exception('User ID is required');
+    }
+
+    final uri = Uri.parse(
+      '${_base(tripId)}/story',
+    ).replace(queryParameters: {'userId': userId});
+
     final headers = await AuthHeaders.build();
+
+    debugPrint('GET STORY DATA: $uri');
+
     final response = await http.get(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(
-        'Failed to load story data (${response.statusCode}): ${response.body}',
+        'Failed to load story data '
+        '(${response.statusCode}): ${response.body}',
       );
     }
 
     final decoded = jsonDecode(response.body);
+
     return StoryData.fromJson(decoded['storyData'] as Map<String, dynamic>);
   }
 

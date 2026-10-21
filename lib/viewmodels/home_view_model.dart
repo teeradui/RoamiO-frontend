@@ -3,6 +3,7 @@ import 'package:roamio_frontend/models/services/trip_member_service.dart';
 import 'package:roamio_frontend/models/services/trip_service.dart';
 import 'package:roamio_frontend/models/trip_model.dart' as trip_model;
 import 'package:roamio_frontend/viewmodels/trip_card_view_model.dart';
+import 'package:roamio_frontend/models/services/auth_service.dart';
 
 enum TripFilter { all, upcoming, active, completed }
 
@@ -16,7 +17,7 @@ class HomeViewModel extends ChangeNotifier {
   final TripService _tripService;
   final TripMemberService _tripMemberService;
 
-  final _userName = 'Tiana';
+  String _userName = '';
 
   String get userName => _userName;
 
@@ -110,6 +111,7 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> loadTrips({bool forceRefresh = false}) async {
+    await loadUserName();
     if (_isDisposed) return;
 
     isLoading = true;
@@ -179,6 +181,15 @@ class HomeViewModel extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadUserName() async {
+    final userName = await AuthService.instance.getCurrentUserName();
+
+    if (_isDisposed) return;
+
+    _userName = userName ?? '';
+    notifyListeners();
   }
 
   List<TripCardViewModel> get upcomingActiveTrips {

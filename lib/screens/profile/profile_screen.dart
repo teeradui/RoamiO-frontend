@@ -123,7 +123,9 @@ class _ProfileView extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () async {
                           Navigator.of(dialogContext).pop();
-                          await context.read<ProfileViewModel>().logout(context);
+                          await context.read<ProfileViewModel>().logout(
+                            context,
+                          );
 
                           // TODO: navigate to Sign In screen
                         },

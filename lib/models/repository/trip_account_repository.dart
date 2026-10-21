@@ -205,4 +205,20 @@ class TripAccountRepository {
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
     return data.map((e) => AccountAward.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50}) async {
+    final uri = Uri.parse('$_base/leaderboard?limit=$limit');
+
+    // Public route — no auth headers required.
+    final response = await http.get(uri);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load leaderboard (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+    return data.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
+  }
   }

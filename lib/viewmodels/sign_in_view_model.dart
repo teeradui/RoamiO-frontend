@@ -46,6 +46,7 @@ class SignInViewModel extends ChangeNotifier {
       await AuthService.instance.saveSession(
         token: result.token,
         userId: result.account.userId,
+        userName: result.account.firstName,
       );
 
       _isLoading = false;

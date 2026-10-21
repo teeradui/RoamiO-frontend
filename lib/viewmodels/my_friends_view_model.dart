@@ -33,8 +33,8 @@ class MyFriendsViewModel extends ChangeNotifier {
   MyFriendsViewModel({
     TripFriendService? tripFriendService,
     TripAccountService? tripAccountService,
-  })  : _tripFriendService = tripFriendService ?? TripFriendService(),
-        _tripAccountService = tripAccountService ?? TripAccountService();
+  }) : _tripFriendService = tripFriendService ?? TripFriendService(),
+       _tripAccountService = tripAccountService ?? TripAccountService();
 
   final TripFriendService _tripFriendService;
   final TripAccountService _tripAccountService;
@@ -57,6 +57,7 @@ class MyFriendsViewModel extends ChangeNotifier {
   List<FriendItem> get friends => List.unmodifiable(_friends);
 
   Future<void> loadFriends() async {
+    debugPrint('LOAD FRIENDS CALLED');
     _errorType = null;
     notifyListeners();
 
@@ -68,9 +69,22 @@ class MyFriendsViewModel extends ChangeNotifier {
 
       final fetchedFriends = await _tripFriendService.getAllFriends();
 
-      // Only show accepted friendships, not pending/undecided rows.
+      debugPrint(
+        'ALL FRIENDS: ${fetchedFriends.map((f) => {'friendId': f.friendId, 'userId': f.userId, 'friendUserId': f.friendUserId, 'friendStatus': f.friendStatus.name, 'username': f.username}).toList()}',
+      );
+
+      // Only show accepted friendships
       final acceptedFriends = fetchedFriends
           .where((f) => f.friendStatus == FriendStatus.friend)
+          .fold<Map<String, TripFriend>>({}, (map, friend) {
+            final otherUserId = friend.userId == currentUserId
+                ? friend.friendUserId
+                : friend.userId;
+
+            map[otherUserId] = friend;
+            return map;
+          })
+          .values
           .toList();
 
       // Resolve "the other person" in each friendship relative to me.
@@ -99,7 +113,9 @@ class MyFriendsViewModel extends ChangeNotifier {
       }
 
       _friends = acceptedFriends.map((f) {
-        final otherUserId = f.userId == currentUserId ? f.friendUserId : f.userId;
+        final otherUserId = f.userId == currentUserId
+            ? f.friendUserId
+            : f.userId;
         final account = accountsByUserId[otherUserId];
 
         return FriendItem(

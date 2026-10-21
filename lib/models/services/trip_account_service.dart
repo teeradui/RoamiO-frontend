@@ -63,4 +63,8 @@ class TripAccountService {
   Future<TripAccount> deleteAccount(String userId) {
     return _repo.deleteAccount(userId);
   }
+
+  Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50}) {
+    return _repo.getLeaderboard(limit: limit);
+  }
 }

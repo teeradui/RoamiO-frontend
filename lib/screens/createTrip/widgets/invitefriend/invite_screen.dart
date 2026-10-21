@@ -24,6 +24,12 @@ class _Step2InviteFriendsState extends State<Step2InviteFriends> {
   final InviteFriendsViewModel viewModel = InviteFriendsViewModel();
 
   @override
+  void initState() {
+    super.initState();
+    viewModel.loadFriends();
+  }
+
+  @override
   void dispose() {
     viewModel.dispose();
     super.dispose();

@@ -10,14 +10,19 @@ import 'package:roamio_frontend/viewmodels/friend_display_item.dart';
 class FriendRequestItem implements FriendDisplayItem {
   final String requestId;
   final String userId;
+
   @override
   final String name;
+
   @override
   final String username;
+
   @override
   final String? profileImageUrl;
+
   @override
   final int reliabilityScore;
+
   final DateTime? requestTime;
 
   const FriendRequestItem({
@@ -35,14 +40,15 @@ class FriendRequestViewModel extends ChangeNotifier {
   FriendRequestViewModel({
     TripFriendService? tripFriendService,
     TripAccountService? tripAccountService,
-  }) : _tripFriendService = tripFriendService ?? TripFriendService(),
-      _tripAccountService = tripAccountService ?? TripAccountService();
+  })  : _tripFriendService =
+            tripFriendService ?? TripFriendService(),
+        _tripAccountService =
+            tripAccountService ?? TripAccountService();
 
   final TripFriendService _tripFriendService;
   final TripAccountService _tripAccountService;
 
   FriendListErrorType? _errorType;
-
   FriendListErrorType? _responseErrorType;
 
   List<FriendRequestItem> _requests = [];
@@ -51,10 +57,8 @@ class FriendRequestViewModel extends ChangeNotifier {
     switch (_errorType) {
       case FriendListErrorType.system:
         return 'Unable to load friend requests. Please try again.';
-
       case FriendListErrorType.network:
         return 'Request failed. Please check your connection.';
-
       case null:
         return null;
     }
@@ -64,107 +68,135 @@ class FriendRequestViewModel extends ChangeNotifier {
     switch (_responseErrorType) {
       case FriendListErrorType.system:
         return 'Unable to respond to friend request. Please try again.';
-
       case FriendListErrorType.network:
         return 'Request failed. Please check your connection.';
-
       case null:
         return null;
     }
   }
 
-  List<FriendRequestItem> get requests => List.unmodifiable(_requests);
+  List<FriendRequestItem> get requests =>
+      List.unmodifiable(_requests);
 
   Future<void> loadRequests() async {
     _errorType = null;
     notifyListeners();
 
     try {
-      final currentUserId = await AuthService.instance.getCurrentUserId();
+      final currentUserId =
+          await AuthService.instance.getCurrentUserId();
+
       if (currentUserId == null) {
         throw Exception('Not signed in');
       }
 
-      final fetchedRequests = await _tripFriendService.getAllRequests();
+      final fetchedRequests =
+          await _tripFriendService.getAllRequests();
 
-      // Only show pending/undecided requests.
+      // Only show pending requests where the current user
+      // is the receiver.
       final pendingRequests = fetchedRequests
-        .where((request) =>
-            request.requestStatus == RequestStatus.undecided)
-        .toList();
+          .where(
+            (request) =>
+                request.requestStatus ==
+                    RequestStatus.undecided &&
+                request.receiverId == currentUserId,
+          )
+          .toList();
 
-      // For an incoming request, the other user is the sender.
+      // Get the accounts of the people who sent the requests.
       final otherUserIds = pendingRequests
-        .map((request) => request.senderId)
-        .toSet()
-        .toList();
+          .map((request) => request.senderId)
+          .toSet()
+          .toList();
 
-      final accountResults = await Future.wait(
-        otherUserIds.map((userId) async {
-          try {
-            return await _tripAccountService.getAccountById(userId); 
-          } catch (error) {
-            debugPrint('LOAD REQUEST ACCOUNT ERROR ($userId): $error');
-            return null;
-          }
-        }),
+      final accountResults =
+          await Future.wait(
+        otherUserIds.map(
+          (userId) async {
+            try {
+              return await _tripAccountService
+                  .getAccountById(userId);
+            } catch (error) {
+              debugPrint(
+                'LOAD REQUEST ACCOUNT ERROR ($userId): $error',
+              );
+              return null;
+            }
+          },
+        ),
       );
 
       final accountsByUserId = <String, dynamic>{};
 
-        for (var i = 0; i < otherUserIds.length; i++) {
-          final account = accountResults[i];
+      for (var i = 0; i < otherUserIds.length; i++) {
+        final account = accountResults[i];
 
-          if (account != null) {
-            accountsByUserId[otherUserIds[i]] = account;
-          }
+        if (account != null) {
+          accountsByUserId[otherUserIds[i]] = account;
         }
-
-        _requests = pendingRequests.map((request) {
-          final otherUserId = request.senderId;
-          final account = accountsByUserId[otherUserId];
-
-          return FriendRequestItem(
-            requestId: request.requestId,
-            userId: request.senderId,
-            name: account != null
-                ? '${account.firstName} ${account.lastName}'.trim()
-                : 'Unknown User',
-            username: account != null
-                ? '@${account.username}'
-                : '',
-            profileImageUrl: account?.profilePicture,
-            reliabilityScore: account?.reliabilityScore.round() ?? 0,
-            requestTime: null,
-          );
-        }).toList();
-
-        notifyListeners();
-      } catch (error, stackTrace) {
-        debugPrint('LOAD REQUESTS ERROR: $error');
-        debugPrintStack(stackTrace: stackTrace);
-
-        final message = error.toString().toLowerCase();
-
-        if (message.contains('socketexception') ||
-            message.contains('connection refused') ||
-            message.contains('network is unreachable') ||
-            message.contains('failed host lookup') ||
-            message.contains('timed out')) {
-          _errorType = FriendListErrorType.network;
-        } else {
-          _errorType = FriendListErrorType.system;
-        }
-
-        notifyListeners();
       }
+
+      _requests = pendingRequests.map((request) {
+        final otherUserId = request.senderId;
+        final account = accountsByUserId[otherUserId];
+
+        return FriendRequestItem(
+          // IMPORTANT:
+          // This is the FriendRequest primary key.
+          requestId: request.requestId,
+
+          // This is the sender's user ID.
+          userId: request.senderId,
+
+          name: account != null
+              ? '${account.firstName} ${account.lastName}'.trim()
+              : 'Unknown User',
+
+          username: account != null
+              ? '@${account.username}'
+              : '',
+
+          profileImageUrl:
+              account?.profilePicture,
+
+          reliabilityScore:
+              account?.reliabilityScore.round() ?? 0,
+
+          requestTime: null,
+        );
+      }).toList();
+
+      notifyListeners();
+    } catch (error, stackTrace) {
+      debugPrint('LOAD REQUESTS ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      final message = error.toString().toLowerCase();
+
+      if (message.contains('socketexception') ||
+          message.contains('connection refused') ||
+          message.contains('network is unreachable') ||
+          message.contains('failed host lookup') ||
+          message.contains('timed out')) {
+        _errorType = FriendListErrorType.network;
+      } else {
+        _errorType = FriendListErrorType.system;
+      }
+
+      notifyListeners();
     }
+  }
 
   Future<void> acceptRequest(String requestId) async {
     _responseErrorType = null;
     notifyListeners();
 
     try {
+      debugPrint(
+        'ACCEPTING REQUEST ID: $requestId',
+      );
+
       await _tripFriendService.updateRequestStatus(
         requestId,
         RequestStatus.accepted,
@@ -176,8 +208,13 @@ class FriendRequestViewModel extends ChangeNotifier {
 
       notifyListeners();
     } catch (error, stackTrace) {
-      debugPrint('ACCEPT REQUEST ERROR: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      debugPrint(
+        'ACCEPT REQUEST ERROR: $error',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
 
       final message = error.toString().toLowerCase();
 
@@ -186,9 +223,11 @@ class FriendRequestViewModel extends ChangeNotifier {
           message.contains('failed host lookup') ||
           message.contains('network is unreachable') ||
           message.contains('timed out')) {
-        _responseErrorType = FriendListErrorType.network;
+        _responseErrorType =
+            FriendListErrorType.network;
       } else {
-        _responseErrorType = FriendListErrorType.system;
+        _responseErrorType =
+            FriendListErrorType.system;
       }
 
       notifyListeners();
@@ -200,6 +239,10 @@ class FriendRequestViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint(
+        'DECLINING REQUEST ID: $requestId',
+      );
+
       await _tripFriendService.updateRequestStatus(
         requestId,
         RequestStatus.denied,
@@ -211,19 +254,27 @@ class FriendRequestViewModel extends ChangeNotifier {
 
       notifyListeners();
     } catch (error, stackTrace) {
-      debugPrint('DECLINE REQUEST ERROR: $error');
-      debugPrintStack(stackTrace: stackTrace);
+      debugPrint(
+        'DECLINE REQUEST ERROR: $error',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
 
       final message = error.toString().toLowerCase();
 
       if (message.contains('socketexception') ||
           message.contains('connection refused') ||
           message.contains('failed host lookup') ||
+          message.contains('failed host lookup') ||
           message.contains('network is unreachable') ||
           message.contains('timed out')) {
-        _responseErrorType = FriendListErrorType.network;
+        _responseErrorType =
+            FriendListErrorType.network;
       } else {
-        _responseErrorType = FriendListErrorType.system;
+        _responseErrorType =
+            FriendListErrorType.system;
       }
 
       notifyListeners();
@@ -241,12 +292,14 @@ class FriendRequestViewModel extends ChangeNotifier {
   }
 
   void setResponseSystemError() {
-    _responseErrorType = FriendListErrorType.system;
+    _responseErrorType =
+        FriendListErrorType.system;
     notifyListeners();
   }
 
   void setResponseNetworkError() {
-    _responseErrorType = FriendListErrorType.network;
+    _responseErrorType =
+        FriendListErrorType.network;
     notifyListeners();
   }
 

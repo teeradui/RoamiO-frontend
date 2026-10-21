@@ -6,7 +6,7 @@ import 'package:roamio_frontend/models/services/trip_account_service.dart';
 
 class RegisterViewModel extends ChangeNotifier {
   RegisterViewModel({TripAccountService? tripAccountService})
-      : _tripAccountService = tripAccountService ?? TripAccountService();
+    : _tripAccountService = tripAccountService ?? TripAccountService();
 
   final TripAccountService _tripAccountService;
   bool _isLoading = false;
@@ -154,7 +154,9 @@ class RegisterViewModel extends ChangeNotifier {
         username: formattedUsername,
         email: email,
         password: password,
-        profilePicture: profilePicturePath != null ? File(profilePicturePath) : null,
+        profilePicture: profilePicturePath != null
+            ? File(profilePicturePath)
+            : null,
       );
 
       _isLoading = false;
@@ -174,13 +176,7 @@ class RegisterViewModel extends ChangeNotifier {
   }
 
   String _formatUsername(String username) {
-    final trimmedUsername = username.trim();
-
-    if (trimmedUsername.startsWith('@')) {
-      return trimmedUsername;
-    }
-
-    return '@$trimmedUsername';
+    return username.trim().replaceFirst(RegExp(r'^@'), '');
   }
 
   void clearError() {

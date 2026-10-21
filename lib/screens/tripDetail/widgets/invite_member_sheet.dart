@@ -2,21 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/invite_friends_view_model.dart';
 
-
-Future<void> showInviteMemberSheet(BuildContext context, String tripId) {
+Future<void> showInviteMemberSheet(
+  BuildContext context,
+  String tripId,
+) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.bgPrimary,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(24),
+      ),
     ),
-    builder: (context) => _InviteMemberSheetContent(tripId: tripId),
+    builder: (context) => _InviteMemberSheetContent(
+      tripId: tripId,
+    ),
   );
 }
 
 class _InviteMemberSheetContent extends StatefulWidget {
-  const _InviteMemberSheetContent({required this.tripId});
+  const _InviteMemberSheetContent({
+    required this.tripId,
+  });
 
   final String tripId;
 
@@ -30,6 +38,12 @@ class _InviteMemberSheetContentState
   final InviteFriendsViewModel viewModel = InviteFriendsViewModel();
 
   @override
+  void initState() {
+    super.initState();
+    viewModel.loadFriends();
+  }
+
+  @override
   void dispose() {
     viewModel.dispose();
     super.dispose();
@@ -37,7 +51,10 @@ class _InviteMemberSheetContentState
 
   Future<void> _handleSendInvites() async {
     await viewModel.sendInvites(widget.tripId);
-    if (mounted) Navigator.pop(context);
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -85,15 +102,20 @@ class _InviteMemberSheetContentState
 
               ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  maxHeight:
+                      MediaQuery.of(context).size.height * 0.4,
                 ),
                 child: viewModel.hasFilteredFriends
                     ? ListView.builder(
                         shrinkWrap: true,
-                        itemCount: viewModel.filteredFriends.length,
+                        itemCount:
+                            viewModel.filteredFriends.length,
                         itemBuilder: (context, index) {
-                          final friend = viewModel.filteredFriends[index];
-                          final isSelected = viewModel.isSelected(friend.id);
+                          final friend =
+                              viewModel.filteredFriends[index];
+
+                          final isSelected =
+                              viewModel.isSelected(friend.id);
 
                           return ListTile(
                             title: Text(friend.username),
@@ -105,16 +127,21 @@ class _InviteMemberSheetContentState
                                   ? AppColors.btnPrimary
                                   : AppColors.tabInactive,
                             ),
-                            onTap: () => viewModel.toggleFriend(friend.id),
+                            onTap: () {
+                              viewModel.toggleFriend(friend.id);
+                            },
                           );
                         },
                       )
                     : const Center(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
+                          padding:
+                              EdgeInsets.symmetric(vertical: 24),
                           child: Text(
                             "No friends found",
-                            style: TextStyle(color: AppColors.tabInactive),
+                            style: TextStyle(
+                              color: AppColors.tabInactive,
+                            ),
                           ),
                         ),
                       ),
@@ -124,7 +151,10 @@ class _InviteMemberSheetContentState
                 const SizedBox(height: 8),
                 Text(
                   viewModel.errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 13),
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 13,
+                  ),
                 ),
               ],
 
@@ -134,9 +164,11 @@ class _InviteMemberSheetContentState
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: (viewModel.selectedCount > 0 && !viewModel.isSubmitting)
-                      ? _handleSendInvites
-                      : null,
+                  onPressed:
+                      (viewModel.selectedCount > 0 &&
+                              !viewModel.isSubmitting)
+                          ? _handleSendInvites
+                          : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.btnPrimary,
                     shape: RoundedRectangleBorder(
@@ -149,7 +181,10 @@ class _InviteMemberSheetContentState
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation(AppColors.bgPrimary),
+                            valueColor:
+                                AlwaysStoppedAnimation(
+                              AppColors.bgPrimary,
+                            ),
                           ),
                         )
                       : Text(

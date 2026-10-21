@@ -27,7 +27,11 @@ class _FriendRequestContent extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 34, color: AppColors.textMuted),
+          Icon(
+            icon,
+            size: 34,
+            color: AppColors.textMuted,
+          ),
 
           const SizedBox(height: 16),
 
@@ -129,17 +133,23 @@ class _FriendRequestContent extends StatelessWidget {
                 ),
               ),
               showReliabilityScore: false,
+
+              // Open the sender's profile.
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => FriendProfileScreen(userId: request.userId),
+                    builder: (_) => FriendProfileScreen(
+                      userId: request.userId,
+                    ),
                   ),
                 );
               },
+
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // ACCEPT
                   Container(
                     width: 32,
                     height: 32,
@@ -150,14 +160,20 @@ class _FriendRequestContent extends StatelessWidget {
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       onPressed: () async {
-                        await viewModel.acceptRequest(request.userId);
+                        // IMPORTANT:
+                        // Use request.requestId, NOT request.userId.
+                        await viewModel.acceptRequest(
+                          request.requestId,
+                        );
 
                         final error = viewModel.responseErrorMessage;
 
                         if (context.mounted && error != null) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(error)));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(error),
+                            ),
+                          );
                         }
                       },
                       icon: const Icon(
@@ -170,6 +186,7 @@ class _FriendRequestContent extends StatelessWidget {
 
                   const SizedBox(width: 6),
 
+                  // DECLINE
                   Container(
                     width: 32,
                     height: 32,
@@ -180,14 +197,20 @@ class _FriendRequestContent extends StatelessWidget {
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       onPressed: () async {
-                        await viewModel.declineRequest(request.userId);
+                        // IMPORTANT:
+                        // Use request.requestId, NOT request.userId.
+                        await viewModel.declineRequest(
+                          request.requestId,
+                        );
 
                         final error = viewModel.responseErrorMessage;
 
                         if (context.mounted && error != null) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(error)));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(error),
+                            ),
+                          );
                         }
                       },
                       icon: const Icon(

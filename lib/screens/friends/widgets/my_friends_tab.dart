@@ -12,7 +12,7 @@ class MyFriendsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => MyFriendsViewModel() /*..loadFriends()*/,
+      create: (_) => MyFriendsViewModel()..loadFriends(),
       child: const _MyFriendsContent(),
     );
   }
@@ -31,7 +31,6 @@ class _MyFriendsContent extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 34, color: AppColors.textMuted),
-          
 
           const SizedBox(height: 16),
 
