@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:roamio_frontend/models/services/trip_account_service.dart';
 
 enum ForgotPasswordStep {
   enterEmail,
@@ -8,23 +9,23 @@ enum ForgotPasswordStep {
 }
 
 class ForgotPasswordViewModel extends ChangeNotifier {
+  final TripAccountService _service;
+
+  ForgotPasswordViewModel({TripAccountService? service})
+      : _service = service ?? TripAccountService();
+
   ForgotPasswordStep _currentStep = ForgotPasswordStep.enterEmail;
 
   bool _isLoading = false;
   String? _errorMessage;
 
   String? _registeredEmail;
-  String? _mockOtp;
+  String? _resetToken;
 
   ForgotPasswordStep get currentStep => _currentStep;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-
-  // Mock registered email
-  final List<String> _registeredEmails = [
-    'teerada@example.com',
-    'test@example.com',
-  ];
+  String? get registeredEmail => _registeredEmail;
 
   // SRS-178, SRS-179
   Future<bool> requestPasswordReset(String email) async {
@@ -33,6 +34,8 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     final normalizedEmail = email.trim().toLowerCase();
 
     if (normalizedEmail.isEmpty) {
+      _errorMessage = 'Please enter your email address.';
+      notifyListeners();
       return false;
     }
 
@@ -40,39 +43,20 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
-
-      // SRS-186
-      if (!_registeredEmails.contains(normalizedEmail)) {
-        _errorMessage =
-            'No account was found with this email.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      await _service.forgotPassword(normalizedEmail);
 
       _registeredEmail = normalizedEmail;
-
-      // Mock OTP
-      _mockOtp = '123456';
-
-      debugPrint('========== PASSWORD RESET ==========');
-      debugPrint('Email: $_registeredEmail');
-      debugPrint('Mock OTP: $_mockOtp');
-      debugPrint('====================================');
-
       _currentStep = ForgotPasswordStep.enterOtp;
 
-      _isLoading = false;
-      notifyListeners();
       return true;
     } catch (e) {
       // SRS-190
-      _isLoading = false;
       _errorMessage =
-          'Unable to reset your password. Please try again.';
-      notifyListeners();
+          'Unable to process your request. Please try again.';
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -80,7 +64,15 @@ class ForgotPasswordViewModel extends ChangeNotifier {
   Future<bool> verifyOtp(String otp) async {
     _clearError();
 
+    if (_registeredEmail == null) {
+      _errorMessage = 'Please request a password reset first.';
+      notifyListeners();
+      return false;
+    }
+
     if (otp.trim().isEmpty) {
+      _errorMessage = 'Please enter the OTP.';
+      notifyListeners();
       return false;
     }
 
@@ -88,41 +80,32 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 700));
-
-      // Mock OTP expiration check
-      final isExpired = false;
-
-      if (isExpired) {
-        // SRS-188
-        _errorMessage =
-            'Your OTP has expired. Please request a new one.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      // SRS-187
-      if (otp.trim() != _mockOtp) {
-        _errorMessage =
-            'Invalid OTP. Please try again.';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      _resetToken = await _service.verifyResetOtp(
+        _registeredEmail!,
+        otp.trim(),
+      );
 
       _currentStep = ForgotPasswordStep.resetPassword;
 
-      _isLoading = false;
-      notifyListeners();
       return true;
     } catch (e) {
-      // SRS-190
-      _isLoading = false;
-      _errorMessage =
-          'Unable to reset your password. Please try again.';
-      notifyListeners();
+      // SRS-187, SRS-188, SRS-190
+      final error = e.toString().replaceFirst('Exception: ', '');
+
+      if (error.toLowerCase().contains('expired')) {
+        _errorMessage =
+            'Your OTP has expired. Please request a new one.';
+      } else if (error.toLowerCase().contains('attempt')) {
+        _errorMessage =
+            'Maximum OTP attempts exceeded. Please request a new OTP.';
+      } else {
+        _errorMessage = 'Invalid OTP. Please try again.';
+      }
+
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -131,6 +114,8 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     _clearError();
 
     if (_registeredEmail == null) {
+      _errorMessage = 'Please enter your email address first.';
+      notifyListeners();
       return false;
     }
 
@@ -138,26 +123,19 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      await _service.forgotPassword(_registeredEmail!);
 
-      // Generate a new mock OTP
-      _mockOtp = '654321';
+      _resetToken = null;
 
-      debugPrint('========== RESEND OTP ==========');
-      debugPrint('Email: $_registeredEmail');
-      debugPrint('New Mock OTP: $_mockOtp');
-      debugPrint('================================');
-
-      _isLoading = false;
-      notifyListeners();
       return true;
     } catch (e) {
       // SRS-190
-      _isLoading = false;
       _errorMessage =
-          'Unable to reset your password. Please try again.';
-      notifyListeners();
+          'Unable to send a new OTP. Please try again.';
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -168,6 +146,18 @@ class ForgotPasswordViewModel extends ChangeNotifier {
   }) async {
     _clearError();
 
+    if (newPassword.isEmpty || passwordConfirmation.isEmpty) {
+      _errorMessage = 'Please complete both password fields.';
+      notifyListeners();
+      return false;
+    }
+
+    if (newPassword.length < 8) {
+      _errorMessage = 'Password must be at least 8 characters.';
+      notifyListeners();
+      return false;
+    }
+
     if (newPassword != passwordConfirmation) {
       // SRS-189
       _errorMessage = 'Passwords do not match.';
@@ -175,7 +165,9 @@ class ForgotPasswordViewModel extends ChangeNotifier {
       return false;
     }
 
-    if (newPassword.isEmpty || passwordConfirmation.isEmpty) {
+    if (_resetToken == null) {
+      _errorMessage = 'Please verify your OTP first.';
+      notifyListeners();
       return false;
     }
 
@@ -183,30 +175,35 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      await _service.resetPassword(
+        _resetToken!,
+        newPassword,
+      );
 
-      // Mock password update
-      debugPrint('========== PASSWORD UPDATED ==========');
-      debugPrint('Email: $_registeredEmail');
-      debugPrint('======================================');
-
+      _resetToken = null;
       _currentStep = ForgotPasswordStep.completed;
 
-      _isLoading = false;
-      notifyListeners();
       return true;
     } catch (e) {
       // SRS-190
-      _isLoading = false;
-      _errorMessage =
-          'Unable to reset your password. Please try again.';
-      notifyListeners();
+      final error = e.toString().replaceFirst('Exception: ', '');
+
+      _errorMessage = error.contains('expired') ||
+              error.contains('token')
+          ? 'Your reset session has expired. Please request a new OTP.'
+          : 'Unable to reset your password. Please try again.';
+
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   void backToEmail() {
     _clearError();
+    _registeredEmail = null;
+    _resetToken = null;
     _currentStep = ForgotPasswordStep.enterEmail;
     notifyListeners();
   }
@@ -225,6 +222,4 @@ class ForgotPasswordViewModel extends ChangeNotifier {
   void _clearError() {
     _errorMessage = null;
   }
-
-  String? get registeredEmail => _registeredEmail;
 }

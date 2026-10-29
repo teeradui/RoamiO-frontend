@@ -67,4 +67,16 @@ class TripAccountService {
   Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50}) {
     return _repo.getLeaderboard(limit: limit);
   }
+
+  Future<String> forgotPassword(String email) {
+    return _repo.forgotPassword(email);
+  }
+
+  Future<String> verifyResetOtp(String email, String otp) {
+    return _repo.verifyResetOtp(email, otp);
+  }
+
+  Future<String> resetPassword(String resetToken, String newPassword) {
+    return _repo.resetPassword(resetToken, newPassword);
+  }
 }

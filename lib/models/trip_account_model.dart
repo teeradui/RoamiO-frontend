@@ -17,11 +17,6 @@ class TripAccount {
   final double reliabilityScore;
   final String? profilePicture;
 
-  // NOTE: backend currently also returns `password` (bcrypt hash) in the
-  // raw JSON response. Intentionally NOT parsed/exposed here — do not add
-  // a password field to this model. Backend-side fix (excluding it from
-  // the response) to be done later.
-
   factory TripAccount.fromJson(Map<String, dynamic> json) {
     return TripAccount(
       userId: json['userId']?.toString() ?? json['user_id']?.toString() ?? '',

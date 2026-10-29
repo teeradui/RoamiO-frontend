@@ -221,4 +221,74 @@ class TripAccountRepository {
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
     return data.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  Future<String> forgotPassword(String email) async {
+    final uri = Uri.parse('$_base/forgot-password');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+
+    if (response.statusCode != 200) {
+      final decoded = jsonDecode(response.body);
+      throw Exception(
+        decoded['message']?.toString() ?? 'Failed to request password reset.',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+    return decoded['message']?.toString() ?? 'Password reset request processed.';
+  }
+
+  Future<String> verifyResetOtp(String email, String otp) async {
+    final uri = Uri.parse('$_base/verify-reset-otp');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'otp': otp,
+      }),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        decoded['message']?.toString() ?? 'OTP verification failed.',
+      );
+    }
+
+    return decoded['resetToken']?.toString() ??
+        (throw Exception('Reset token was not returned by the server.'));
+  }
+
+  Future<String> resetPassword(
+    String resetToken,
+    String newPassword,
+  ) async {
+    final uri = Uri.parse('$_base/reset-password');
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'resetToken': resetToken,
+        'newPassword': newPassword,
+      }),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        decoded['message']?.toString() ?? 'Failed to reset password.',
+      );
+    }
+
+    return decoded['message']?.toString() ?? 'Password reset successfully.';
+  }
   }
