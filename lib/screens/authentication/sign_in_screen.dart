@@ -55,8 +55,66 @@ class _SignInFormState extends State<_SignInForm> {
     if (!mounted) return;
 
     if (success) {
-      Navigator.pushReplacementNamed(context, '/home');
-    }
+  Navigator.pushReplacementNamed(context, '/home');
+} else if (viewModel.errorMessage != null) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: AppColors.bgCard,
+      surfaceTintColor: Colors.transparent,
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+      contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+
+      title: const Text(
+        'Sign In Failed',
+        style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      content: Text(
+        viewModel.errorMessage!,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 14,
+          height: 1.5,
+        ),
+      ),
+
+      actions: [
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.btnPrimary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   }
 
   void _forgotPassword() {

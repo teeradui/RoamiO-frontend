@@ -373,19 +373,77 @@ class _RegisterFormState extends State<_RegisterForm> {
     if (!confirmed || !mounted) return;
 
     final success = await viewModel.register(
-      name: _nameController.text.trim(),
-      username: username,
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      passwordConfirmation: _confirmPasswordController.text,
-      profilePicturePath: _profileImage?.path,
-    );
+  name: _nameController.text.trim(),
+  username: username,
+  email: _emailController.text.trim(),
+  password: _passwordController.text,
+  passwordConfirmation: _confirmPasswordController.text,
+  profilePicturePath: _profileImage?.path,
+);
 
-    if (!mounted) return;
+if (!mounted) return;
 
-    if (success) {
-      await _showRegisterSuccess();
-    }
+if (success) {
+  await _showRegisterSuccess();
+} else if (viewModel.errorMessage != null) {
+  showDialog(
+  context: context,
+  builder: (dialogContext) => AlertDialog(
+    backgroundColor: AppColors.bgCard,
+    surfaceTintColor: Colors.transparent,
+    elevation: 8,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+    ),
+    titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+    contentPadding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+    actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+
+    title: const Text(
+      'Registration Failed',
+      style: TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+
+    content: Text(
+      viewModel.errorMessage!,
+      style: const TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: 14,
+        height: 1.5,
+      ),
+    ),
+
+    actions: [
+      SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.btnPrimary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: const Text(
+            'OK',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+}
   }
 
   Future<void> _showRegisterSuccess() async {
@@ -538,15 +596,23 @@ class _RegisterFormState extends State<_RegisterForm> {
               const SizedBox(height: 12),
 
               _buildTextField(
+                
                 controller: _passwordController,
                 label: 'Password',
                 hint: 'Enter your password',
                 obscureText: _obscurePassword,
+                errorText: viewModel.passwordError,
                 onChanged: (value) {
-                  context.read<RegisterViewModel>().checkPasswordMatch(
-                    password: _passwordController.text,
-                    confirmPassword: value,
-                  );
+                  final vm = context.read<RegisterViewModel>();
+
+                  vm.checkPassword(value);
+
+                  if (_confirmPasswordController.text.isNotEmpty) {
+                    vm.checkPasswordMatch(
+                      password: value,
+                      confirmPassword: _confirmPasswordController.text,
+                    );
+                  }
                 },
                 suffixIcon: IconButton(
                   icon: Icon(
@@ -565,7 +631,9 @@ class _RegisterFormState extends State<_RegisterForm> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your password.';
                   }
-
+                  if (value.length < 8) {
+                    return 'Password must be at least 8 characters.';
+                  }
                   return null;
                 },
               ),
@@ -768,7 +836,7 @@ class _RegisterFormState extends State<_RegisterForm> {
                 fontWeight: FontWeight.w500,
               ),
               suffixIcon: suffixIcon,
-
+              
               errorText: errorText,
 
               filled: true,

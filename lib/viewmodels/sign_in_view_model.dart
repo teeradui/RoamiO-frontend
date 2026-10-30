@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:roamio_frontend/models/services/auth_service.dart';
 import 'package:roamio_frontend/models/services/trip_account_service.dart';
@@ -15,7 +17,7 @@ class AuthHeaders {
 
 class SignInViewModel extends ChangeNotifier {
   SignInViewModel({TripAccountService? tripAccountService})
-      : _tripAccountService = tripAccountService ?? TripAccountService();
+    : _tripAccountService = tripAccountService ?? TripAccountService();
 
   final TripAccountService _tripAccountService;
 
@@ -41,6 +43,8 @@ class SignInViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      
+      
       final result = await _tripAccountService.login(username.trim(), password);
 
       await AuthService.instance.saveSession(
@@ -57,7 +61,15 @@ class SignInViewModel extends ChangeNotifier {
       debugPrintStack(stackTrace: stackTrace);
 
       _isLoading = false;
-      _errorMessage = 'Incorrect username or password.';
+
+      if (error.toString().contains('Simulated system error')) {
+        _errorMessage = 'Unable to sign in. Please try again.';
+      } else if (error is SocketException) {
+        _errorMessage = 'Request failed. Please check your connection.';
+      } else {
+        _errorMessage = 'Incorrect username or password.';
+      }
+
       notifyListeners();
       return false;
     }

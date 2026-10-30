@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:roamio_frontend/models/services/trip_account_service.dart';
 
@@ -50,9 +52,18 @@ class ForgotPasswordViewModel extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      // SRS-190
-      _errorMessage =
-          'Unable to process your request. Please try again.';
+  // SRS-187, SRS-188, SRS-190
+  final error = e.toString().replaceFirst('Exception: ', '');
+
+  if (error.toLowerCase().contains('expired')) {
+    _errorMessage =
+        'Your OTP has expired. Please request a new one.';
+  } else if (error.toLowerCase().contains('attempt')) {
+    _errorMessage =
+        'Maximum OTP attempts exceeded. Please request a new OTP.';
+  } else {
+    _errorMessage = 'Invalid OTP. Please try again.';
+  }
       return false;
     } finally {
       _isLoading = false;
@@ -79,7 +90,7 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    try {
+    try { 
       _resetToken = await _service.verifyResetOtp(
         _registeredEmail!,
         otp.trim(),
@@ -175,6 +186,7 @@ class ForgotPasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      
       await _service.resetPassword(
         _resetToken!,
         newPassword,
@@ -186,13 +198,16 @@ class ForgotPasswordViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       // SRS-190
-      final error = e.toString().replaceFirst('Exception: ', '');
+      if (e is SocketException) {
+    _errorMessage = 'Request failed. Please check your connection.';
+  } else {
+    final error = e.toString().replaceFirst('Exception: ', '');
 
-      _errorMessage = error.contains('expired') ||
-              error.contains('token')
-          ? 'Your reset session has expired. Please request a new OTP.'
-          : 'Unable to reset your password. Please try again.';
-
+    _errorMessage = error.contains('expired') ||
+            error.contains('token')
+        ? 'Your reset session has expired. Please request a new OTP.'
+        : 'Unable to reset your password. Please try again.';
+  }
       return false;
     } finally {
       _isLoading = false;
