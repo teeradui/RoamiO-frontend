@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 
 import 'package:http/http.dart' as http;
 
@@ -32,8 +34,32 @@ class TripAccountRepository {
     request.fields['password'] = password;
 
     if (profilePicture != null) {
+      final extension = path.extension(profilePicture.path).toLowerCase();
+
+      final MediaType contentType;
+
+      switch (extension) {
+        case '.jpg':
+        case '.jpeg':
+          contentType = MediaType('image', 'jpeg');
+          break;
+        case '.png':
+          contentType = MediaType('image', 'png');
+          break;
+        case '.webp':
+          contentType = MediaType('image', 'webp');
+          break;
+        default:
+          throw Exception('Unsupported image format: $extension');
+      }
+
       request.files.add(
-        await http.MultipartFile.fromPath('profilePicture', profilePicture.path),
+        await http.MultipartFile.fromPath(
+          'profilePicture',
+          profilePicture.path,
+          contentType: contentType,
+          filename: 'profile$extension',
+        ),
       );
     }
 
@@ -68,7 +94,10 @@ class TripAccountRepository {
     return LoginResult.fromJson(decoded);
   }
 
-  Future<TripAccount> updateAccount(String userId, Map<String, dynamic> fields) async {
+  Future<TripAccount> updateAccount(
+    String userId,
+    Map<String, dynamic> fields,
+  ) async {
     final uri = Uri.parse('$_base/$userId');
     final headers = await AuthHeaders.build();
 
@@ -104,7 +133,9 @@ class TripAccountRepository {
       );
     }
 
-    return TripAccount.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return TripAccount.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 
   Future<List<TripAccount>> getAllAccounts() async {
@@ -121,7 +152,9 @@ class TripAccountRepository {
 
     // Note: controller returns a raw array (no wrapper key).
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data.map((e) => TripAccount.fromJson(e as Map<String, dynamic>)).toList();
+    return data
+        .map((e) => TripAccount.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<TripAccount> deleteAccount(String userId) async {
@@ -151,15 +184,17 @@ class TripAccountRepository {
         'Failed to load accounts trips (${response.statusCode}): ${response.body}',
       );
     }
-    
+
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data.map((e) => AccountTrip.fromJson(e as Map<String, dynamic>)).toList();
+    return data
+        .map((e) => AccountTrip.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<bool> checkUsernameTaken(String username) async {
-    final uri = Uri.parse('$_base/checkUsername').replace(
-      queryParameters: {'username': username},
-    );
+    final uri = Uri.parse(
+      '$_base/checkUsername',
+    ).replace(queryParameters: {'username': username});
 
     final response = await http.get(uri);
 
@@ -174,9 +209,9 @@ class TripAccountRepository {
   }
 
   Future<bool> checkEmailTaken(String email) async {
-    final uri = Uri.parse('$_base/checkEmail').replace(
-      queryParameters: {'email': email},
-    );
+    final uri = Uri.parse(
+      '$_base/checkEmail',
+    ).replace(queryParameters: {'email': email});
 
     final response = await http.get(uri);
 
@@ -203,7 +238,9 @@ class TripAccountRepository {
     }
 
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data.map((e) => AccountAward.fromJson(e as Map<String, dynamic>)).toList();
+    return data
+        .map((e) => AccountAward.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50}) async {
@@ -219,6 +256,8 @@ class TripAccountRepository {
     }
 
     final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
-    return data.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
+    return data
+        .map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
-  }
+}

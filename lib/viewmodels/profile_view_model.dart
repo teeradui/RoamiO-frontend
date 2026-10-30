@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:roamio_frontend/screens/profile/settings_screen.dart';
 import 'package:roamio_frontend/screens/authentication/sign_in_screen.dart';
 import 'package:roamio_frontend/viewmodels/story_trip_awards_view_model.dart';
+import 'package:roamio_frontend/screens/authentication/authentication_screen.dart';
 import 'package:roamio_frontend/models/services/auth_service.dart';
 import 'package:roamio_frontend/models/services/trip_account_service.dart';
 import 'package:roamio_frontend/models/trip_account_model.dart';
@@ -25,7 +26,7 @@ class ProfileUser {
 
 class ProfileViewModel extends ChangeNotifier {
   ProfileViewModel({TripAccountService? tripAccountService})
-      : _tripAccountService = tripAccountService ?? TripAccountService() {
+    : _tripAccountService = tripAccountService ?? TripAccountService() {
     _initialize();
   }
 
@@ -212,16 +213,16 @@ class ProfileViewModel extends ChangeNotifier {
 
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const SignInScreen()), // TODO: confirm actual sign-in screen widget
+        MaterialPageRoute(builder: (_) => const AuthenticationScreen()),
         (route) => false,
       );
     }
   }
 
   void openSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
   }
 
   // =========================================================
@@ -238,8 +239,7 @@ class ProfileViewModel extends ChangeNotifier {
     if (_isDisposed || _isLoggingOut) return;
 
     try {
-      final fetchedAwards =
-          await _tripAccountService.getAwardsByUserId(userId);
+      final fetchedAwards = await _tripAccountService.getAwardsByUserId(userId);
 
       if (_isDisposed || _isLoggingOut) return;
 

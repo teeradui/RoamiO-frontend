@@ -150,6 +150,6 @@ SPEC CHECKSUMS:
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   widget_recorder_plus: 49c4468e67a9343f699e106489affbf5538aef25
 
-PODFILE CHECKSUM: 53a6aebc29ccee84c41f92f409fc20cd4ca011f1
+PODFILE CHECKSUM: 49efc256fc2306dfb9d5a9f687aeeb9edf1c931e
 
 COCOAPODS: 1.16.2
