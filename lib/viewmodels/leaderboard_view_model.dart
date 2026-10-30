@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:roamio_frontend/models/services/trip_account_service.dart';
+import 'package:roamio_frontend/models/services/auth_service.dart';
 
 enum LeaderboardErrorType { system, network }
 
@@ -10,6 +11,7 @@ class LeaderboardUser {
   final String? profileImageUrl;
   final int reliabilityScore;
   final String? title;
+  final bool isCurrentUser;
 
   const LeaderboardUser({
     required this.userId,
@@ -18,12 +20,13 @@ class LeaderboardUser {
     this.profileImageUrl,
     required this.reliabilityScore,
     this.title,
+    this.isCurrentUser = false,
   });
 }
 
 class LeaderboardViewModel extends ChangeNotifier {
   LeaderboardViewModel({TripAccountService? tripAccountService})
-    : _tripAccountService = tripAccountService ?? TripAccountService();
+      : _tripAccountService = tripAccountService ?? TripAccountService();
 
   final TripAccountService _tripAccountService;
 
@@ -49,13 +52,15 @@ class LeaderboardViewModel extends ChangeNotifier {
 
   List<LeaderboardUser> get users {
     final sortedUsers = List<LeaderboardUser>.from(_users);
+
     sortedUsers.sort(
       (a, b) => b.reliabilityScore.compareTo(a.reliabilityScore),
     );
+
     return List.unmodifiable(sortedUsers);
   }
 
-  LeaderboardUser get topUser => users.first;
+  LeaderboardUser? get topUser => users.isEmpty ? null : users.first;
 
   List<LeaderboardUser> get topThree => users.take(3).toList();
 
@@ -68,19 +73,29 @@ class LeaderboardViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Retrieve the currently logged-in user's ID.
+      final currentUserId =
+          await AuthService.instance.getCurrentUserId();
+
       final entries = await _tripAccountService.getLeaderboard(limit: 50);
 
       _users = entries.asMap().entries.map((entry) {
         final index = entry.key;
         final e = entry.value;
 
+        final userId = e.userId.toString();
+
         return LeaderboardUser(
-          userId: e.userId,
+          userId: userId,
           name: '${e.firstName} ${e.lastName}'.trim(),
           username: '@${e.username}',
           profileImageUrl: e.profilePicture,
           reliabilityScore: e.reliabilityScore.round(),
           title: index < _topTitles.length ? _topTitles[index] : null,
+
+          // Identify the currently logged-in user.
+          isCurrentUser: currentUserId != null &&
+              userId == currentUserId,
         );
       }).toList();
 
@@ -90,6 +105,7 @@ class LeaderboardViewModel extends ChangeNotifier {
       debugPrintStack(stackTrace: stackTrace);
 
       final message = error.toString().toLowerCase();
+
       if (message.contains('socketexception') ||
           message.contains('connection refused') ||
           message.contains('failed host lookup') ||

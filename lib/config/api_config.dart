@@ -5,8 +5,8 @@ class ApiConfig {
   static String tripInvites(String tripId) => '$trips/$tripId/invites';
   static String tripLocation(String tripId) => '$trips/$tripId/location';
   static String tripActivities(String tripId) => '$trips/$tripId/activities';
-  static String userNotifications(String userId) =>
-      '$baseUrl/users/$userId/notifications';
+  static String userNotifications(String userId) => '$baseUrl/users/$userId/notifications';
+  static String scoreHistory(String userId) => '$accounts/$userId/score-history';
   static const String accounts = '$baseUrl/accounts';
   static const String friends = '$baseUrl/friends';
 }

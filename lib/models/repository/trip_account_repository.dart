@@ -329,5 +329,29 @@ class TripAccountRepository {
 
     return decoded['message']?.toString() ?? 'Password reset successfully.';
   }
+
+  Future<List<ScoreHistoryItem>> getScoreHistory(String userId) async {
+    final uri = Uri.parse(ApiConfig.scoreHistory(userId));
+    final headers = await AuthHeaders.build();
+
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load score history '
+        '(${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+
+    final List<dynamic> data = decoded['data'] as List<dynamic>;
+
+    return data
+        .map((item) => ScoreHistoryItem.fromJson(
+              item as Map<String, dynamic>,
+            ))
+        .toList();
+  }
 }
 

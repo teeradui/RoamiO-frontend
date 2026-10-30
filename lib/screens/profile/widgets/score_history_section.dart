@@ -4,6 +4,7 @@ import 'package:ming_cute_icons/ming_cute_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:roamio_frontend/theme/colors.dart';
 import 'package:roamio_frontend/viewmodels/score_history_view_model.dart';
+import 'package:roamio_frontend/models/trip_account_model.dart';
 
 class ScoreHistorySection extends StatelessWidget {
   const ScoreHistorySection({super.key, this.userId});
@@ -70,12 +71,55 @@ class _ScoreHistoryContent extends StatelessWidget {
 
             const SizedBox(height: 14),
 
-            ...viewModel.history.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildHistoryCard(context, viewModel, item),
+            if (viewModel.isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (viewModel.error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Unable to load score history.',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: viewModel.loadHistory,
+                        child: const Text('Try again'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (viewModel.history.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'No score history available yet.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...viewModel.history.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildHistoryCard(context, viewModel, item),
+                ),
               ),
-            ),
           ],
         );
       },

@@ -203,3 +203,69 @@ class LeaderboardEntry {
     );
   }
 }
+enum ScoreHistoryStatus {
+  arrivedEarly,
+  onTime,
+  slightDelay,
+  extendedDelay,
+  ghost,
+}
+
+class ScoreHistoryItem {
+  final String tripId;
+  final String tripName;
+  final DateTime tripDate;
+  final ScoreHistoryStatus status;
+  final int score;
+
+  const ScoreHistoryItem({
+    required this.tripId,
+    required this.tripName,
+    required this.tripDate,
+    required this.status,
+    required this.score,
+  });
+
+  factory ScoreHistoryItem.fromJson(Map<String, dynamic> json) {
+    final attendance = json['attendance']?.toString() ?? '';
+
+    return ScoreHistoryItem(
+      tripId: json['tripId']?.toString() ??
+          json['trip_id']?.toString() ??
+          '',
+      tripName: json['tripName']?.toString() ??
+          json['trip_name']?.toString() ??
+          '',
+      tripDate: DateTime.tryParse(
+            json['startDate']?.toString() ??
+                json['start_date']?.toString() ??
+                '',
+          ) ??
+          DateTime.now(),
+      status: _scoreHistoryStatusFromString(attendance),
+      score: _parseScore(json['scoreChange'] ?? json['score_change']),
+    );
+  }
+
+  static ScoreHistoryStatus _scoreHistoryStatusFromString(String value) {
+    switch (value) {
+      case 'Early':
+        return ScoreHistoryStatus.arrivedEarly;
+      case 'OnTime':
+        return ScoreHistoryStatus.onTime;
+      case 'Late':
+        return ScoreHistoryStatus.slightDelay;
+      case 'VeryLate':
+        return ScoreHistoryStatus.extendedDelay;
+      case 'Ghost':
+      case 'Missing':
+      default:
+        return ScoreHistoryStatus.ghost;
+    }
+  }
+
+  static int _parseScore(dynamic value) {
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}

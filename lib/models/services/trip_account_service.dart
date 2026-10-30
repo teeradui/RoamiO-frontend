@@ -79,4 +79,11 @@ class TripAccountService {
   Future<String> resetPassword(String resetToken, String newPassword) {
     return _repo.resetPassword(resetToken, newPassword);
   }
+
+  Future<List<ScoreHistoryItem>> getScoreHistory(String userId) {
+  if (userId.trim().isEmpty) {
+    throw ArgumentError('User ID cannot be empty.');
+  }
+  return _repo.getScoreHistory(userId);
+}
 }

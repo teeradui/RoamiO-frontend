@@ -737,7 +737,7 @@ class _LeaderboardContentState extends State<_LeaderboardContent>
                       ),
                     ),
 
-                    if (user.userId == '1') ...[
+                    if (user.isCurrentUser) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
